@@ -333,7 +333,12 @@ export default function History() {
             <SessionCard
               key={session.id}
               session={session}
-              onClick={() => navigate(`/summary/${session.id}`)}
+              onClick={() => navigate(`/summary/${session.id}`, { 
+                state: { 
+                  fromHistory: true,
+                  historySession: session 
+                } 
+              })}
             />
           ))}
         </div>
