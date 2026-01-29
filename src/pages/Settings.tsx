@@ -3,27 +3,48 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Users, Calendar, Palette, Plus, Pencil, Trash2, Save } from 'lucide-react';
-import { PLAYERS } from '@/lib/players';
+import { Users, Calendar, Palette, Plus, Pencil, Trash2, Save, Loader2 } from 'lucide-react';
+import { usePlayers, useUpdatePlayer, useAddPlayer, useDeletePlayer } from '@/hooks/usePlayers';
+import { useAppSettings, useUpdateNextDate } from '@/hooks/useAppSettings';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Settings() {
-  const [players, setPlayers] = useState(PLAYERS);
+  const { toast } = useToast();
+  const { data: players = [], isLoading: playersLoading } = usePlayers();
+  const { data: settings, isLoading: settingsLoading } = useAppSettings();
+  const updatePlayer = useUpdatePlayer();
+  const addPlayer = useAddPlayer();
+  const deletePlayer = useDeletePlayer();
+  const updateNextDate = useUpdateNextDate();
+
   const [newPlayerName, setNewPlayerName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [nextDate, setNextDate] = useState('');
+  const [nextTime, setNextTime] = useState('20:00');
 
   const handleAddPlayer = () => {
     if (!newPlayerName.trim()) return;
-    const newPlayer = {
-      id: Date.now().toString(),
-      name: newPlayerName.trim(),
-    };
-    setPlayers([...players, newPlayer]);
-    setNewPlayerName('');
+    addPlayer.mutate(newPlayerName.trim(), {
+      onSuccess: () => {
+        toast({ title: 'Spieler hinzugefügt!' });
+        setNewPlayerName('');
+      },
+      onError: () => {
+        toast({ variant: 'destructive', title: 'Fehler beim Hinzufügen' });
+      },
+    });
   };
 
   const handleRemovePlayer = (id: string) => {
-    setPlayers(players.filter(p => p.id !== id));
+    deletePlayer.mutate(id, {
+      onSuccess: () => {
+        toast({ title: 'Spieler entfernt' });
+      },
+      onError: () => {
+        toast({ variant: 'destructive', title: 'Fehler beim Entfernen' });
+      },
+    });
   };
 
   const handleStartEdit = (id: string, name: string) => {
@@ -33,12 +54,42 @@ export default function Settings() {
 
   const handleSaveEdit = () => {
     if (!editingId || !editName.trim()) return;
-    setPlayers(players.map(p => 
-      p.id === editingId ? { ...p, name: editName.trim() } : p
-    ));
-    setEditingId(null);
-    setEditName('');
+    updatePlayer.mutate({ id: editingId, name: editName.trim() }, {
+      onSuccess: () => {
+        toast({ title: 'Spieler aktualisiert!' });
+        setEditingId(null);
+        setEditName('');
+      },
+      onError: () => {
+        toast({ variant: 'destructive', title: 'Fehler beim Speichern' });
+      },
+    });
   };
+
+  const handleSaveDate = () => {
+    if (!nextDate) return;
+    
+    const [hours, minutes] = nextTime.split(':').map(Number);
+    const dateTime = new Date(nextDate);
+    dateTime.setHours(hours, minutes, 0, 0);
+    
+    updateNextDate.mutate(dateTime, {
+      onSuccess: () => {
+        toast({ title: 'Termin gespeichert!' });
+      },
+      onError: () => {
+        toast({ variant: 'destructive', title: 'Fehler beim Speichern' });
+      },
+    });
+  };
+
+  if (playersLoading || settingsLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,8 +138,13 @@ export default function Settings() {
                       size="icon"
                       className="h-8 w-8 text-primary"
                       onClick={handleSaveEdit}
+                      disabled={updatePlayer.isPending}
                     >
-                      <Save className="h-4 w-4" />
+                      {updatePlayer.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
                     </Button>
                   ) : (
                     <Button
@@ -105,6 +161,7 @@ export default function Settings() {
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                     onClick={() => handleRemovePlayer(player.id)}
+                    disabled={deletePlayer.isPending}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -125,9 +182,13 @@ export default function Settings() {
               variant="outline" 
               className="shrink-0 gap-2"
               onClick={handleAddPlayer}
-              disabled={!newPlayerName.trim()}
+              disabled={!newPlayerName.trim() || addPlayer.isPending}
             >
-              <Plus className="h-4 w-4" />
+              {addPlayer.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Hinzufügen
             </Button>
           </div>
@@ -143,18 +204,46 @@ export default function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {settings?.next_date && (
+            <div className="text-sm text-muted-foreground mb-2">
+              Aktuell: {new Date(settings.next_date).toLocaleDateString('de-CH', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium">Datum</label>
-              <Input type="date" />
+              <Input 
+                type="date" 
+                value={nextDate}
+                onChange={(e) => setNextDate(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Zeit</label>
-              <Input type="time" defaultValue="20:00" />
+              <Input 
+                type="time" 
+                value={nextTime}
+                onChange={(e) => setNextTime(e.target.value)}
+              />
             </div>
           </div>
-          <Button className="w-full gap-2">
-            <Save className="h-4 w-4" />
+          <Button 
+            className="w-full gap-2" 
+            onClick={handleSaveDate}
+            disabled={!nextDate || updateNextDate.isPending}
+          >
+            {updateNextDate.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Speichern
           </Button>
         </CardContent>

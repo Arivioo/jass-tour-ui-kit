@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Users, Trophy, Calculator, AlertCircle, ChevronRight, ChevronLeft, X, Plus, Skull, PartyPopper, Sparkles, MapPin } from 'lucide-react';
-import { PLAYERS, FINE_TYPES, LOCATIONS, formatCHF, type Player } from '@/lib/players';
+import { Users, Trophy, Calculator, AlertCircle, ChevronRight, ChevronLeft, X, Plus, Skull, PartyPopper, Sparkles, MapPin, Loader2 } from 'lucide-react';
+import { FINE_TYPES, LOCATIONS, formatCHF } from '@/lib/players';
+import { usePlayers, type Player } from '@/hooks/usePlayers';
 import { cn } from '@/lib/utils';
 
 type WizardStep = 'players' | 'teams' | 'points';
@@ -51,9 +52,10 @@ interface HistoryEntry {
 
 export default function Session() {
   const navigate = useNavigate();
+  const { data: players = [], isLoading } = usePlayers();
   const [currentMatch, setCurrentMatch] = useState(1);
   const [step, setStep] = useState<WizardStep>('players');
-  const [activePlayers, setActivePlayers] = useState<string[]>(PLAYERS.map(p => p.id));
+  const [activePlayers, setActivePlayers] = useState<string[]>([]);
   const [teamA, setTeamA] = useState<string[]>([]);
   const [teamB, setTeamB] = useState<string[]>([]);
   const [scoresA, setScoresA] = useState<(number | null)[]>(Array(8).fill(null));
@@ -65,6 +67,13 @@ export default function Session() {
   const [winnerTeamNames, setWinnerTeamNames] = useState('');
   const [location, setLocation] = useState<string>('');
   const [customLocation, setCustomLocation] = useState<string>('');
+  const [playersInitialized, setPlayersInitialized] = useState(false);
+
+  // Initialize active players when players load
+  if (players.length > 0 && !playersInitialized) {
+    setActivePlayers(players.map(p => p.id));
+    setPlayersInitialized(true);
+  }
 
   const totalMatches = 5;
   const totalRounds = 8;
@@ -170,9 +179,9 @@ export default function Session() {
       
       // Show winner animation
       const winnerNames = winner === 'A' 
-        ? teamA.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')
+        ? teamA.map(id => players.find(p => p.id === id)?.name || '').join(' & ')
         : winner === 'B'
-        ? teamB.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')
+        ? teamB.map(id => players.find(p => p.id === id)?.name || '').join(' & ')
         : 'Unentschieden';
       setWinnerTeamNames(winnerNames);
       setShowWinnerAnimation(true);
@@ -253,74 +262,83 @@ export default function Session() {
         </div>
       </div>
 
-      {/* Step Content */}
-      {step === 'players' && (
-        <PlayersStep 
-          players={PLAYERS}
-          active={activePlayers}
-          onToggle={(id) => {
-            setActivePlayers(prev => 
-              prev.includes(id) 
-                ? prev.filter(p => p !== id)
-                : [...prev, id]
-            );
-          }}
-          onNext={handleNextStep}
-        />
-      )}
+      {/* Loading state */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          {/* Step Content */}
+          {step === 'players' && (
+            <PlayersStep 
+              players={players}
+              active={activePlayers}
+              onToggle={(id) => {
+                setActivePlayers(prev => 
+                  prev.includes(id) 
+                    ? prev.filter(p => p !== id)
+                    : [...prev, id]
+                );
+              }}
+              onNext={handleNextStep}
+            />
+          )}
 
-      {step === 'teams' && (
-        <TeamsStep
-          players={PLAYERS.filter(p => activePlayers.includes(p.id))}
-          teamA={teamA}
-          teamB={teamB}
-          onTeamAChange={setTeamA}
-          onTeamBChange={setTeamB}
-          location={location}
-          customLocation={customLocation}
-          onLocationChange={setLocation}
-          onCustomLocationChange={setCustomLocation}
-          onNext={handleNextStep}
-          onPrev={handlePrevStep}
-          matchNumber={currentMatch}
-          canGoBack={currentMatch > 1 || true}
-        />
-      )}
+          {step === 'teams' && (
+            <TeamsStep
+              players={players.filter(p => activePlayers.includes(p.id))}
+              teamA={teamA}
+              teamB={teamB}
+              onTeamAChange={setTeamA}
+              onTeamBChange={setTeamB}
+              location={location}
+              customLocation={customLocation}
+              onLocationChange={setLocation}
+              onCustomLocationChange={setCustomLocation}
+              onNext={handleNextStep}
+              onPrev={handlePrevStep}
+              matchNumber={currentMatch}
+              canGoBack={currentMatch > 1 || true}
+            />
+          )}
 
-      {step === 'points' && (
-        <PointsStep
-          scoresA={scoresA}
-          scoresB={scoresB}
-          onScoreAChange={(round, value) => {
-            const newScores = [...scoresA];
-            newScores[round] = value;
-            setScoresA(newScores);
-            // Auto-fill B as complement
-            const newScoresB = [...scoresB];
-            newScoresB[round] = value !== null ? 157 - value : null;
-            setScoresB(newScoresB);
-          }}
-          onScoreBChange={(round, value) => {
-            const newScores = [...scoresB];
-            newScores[round] = value;
-            setScoresB(newScores);
-            // Auto-fill A as complement
-            const newScoresA = [...scoresA];
-            newScoresA[round] = value !== null ? 157 - value : null;
-            setScoresA(newScoresA);
-          }}
-          teamATotal={teamATotal}
-          teamBTotal={teamBTotal}
-          teamANames={teamA.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')}
-          teamBNames={teamB.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')}
-          onNext={handleNextStep}
-          onPrev={handlePrevStep}
-          players={PLAYERS.filter(p => activePlayers.includes(p.id))}
-          fines={fines}
-          onAddFine={(fine) => setFines([...fines, { ...fine, id: Date.now().toString() }])}
-          onRemoveFine={(id) => setFines(fines.filter(f => f.id !== id))}
-          allRoundsComplete={allRoundsComplete}
-        />
+          {step === 'points' && (
+            <PointsStep
+              scoresA={scoresA}
+              scoresB={scoresB}
+              onScoreAChange={(round, value) => {
+                const newScores = [...scoresA];
+                newScores[round] = value;
+                setScoresA(newScores);
+                // Auto-fill B as complement
+                const newScoresB = [...scoresB];
+                newScoresB[round] = value !== null ? 157 - value : null;
+                setScoresB(newScoresB);
+              }}
+              onScoreBChange={(round, value) => {
+                const newScores = [...scoresB];
+                newScores[round] = value;
+                setScoresB(newScores);
+                // Auto-fill A as complement
+                const newScoresA = [...scoresA];
+                newScoresA[round] = value !== null ? 157 - value : null;
+                setScoresA(newScoresA);
+              }}
+              teamATotal={teamATotal}
+              teamBTotal={teamBTotal}
+              teamANames={teamA.map(id => players.find(p => p.id === id)?.name || '').join(' & ')}
+              teamBNames={teamB.map(id => players.find(p => p.id === id)?.name || '').join(' & ')}
+              onNext={handleNextStep}
+              onPrev={handlePrevStep}
+              players={players.filter(p => activePlayers.includes(p.id))}
+              fines={fines}
+              onAddFine={(fine) => setFines([...fines, { ...fine, id: Date.now().toString() }])}
+              onRemoveFine={(id) => setFines(fines.filter(f => f.id !== id))}
+              allRoundsComplete={allRoundsComplete}
+            />
+          )}
+        </>
       )}
 
     </div>
