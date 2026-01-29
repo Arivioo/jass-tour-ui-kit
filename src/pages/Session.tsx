@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Users, Trophy, Calculator, AlertCircle, ChevronRight, ChevronLeft, X, Plus, Skull, PartyPopper } from 'lucide-react';
+import { Users, Trophy, Calculator, AlertCircle, ChevronRight, ChevronLeft, X, Plus, Skull, PartyPopper, Sparkles } from 'lucide-react';
 import { PLAYERS, FINE_TYPES, formatCHF, type Player } from '@/lib/players';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +33,17 @@ interface PlayerWins {
   [playerId: string]: number;
 }
 
+// History entry for navigation
+interface HistoryEntry {
+  match: number;
+  step: WizardStep;
+  teamA: string[];
+  teamB: string[];
+  scoresA: (number | null)[];
+  scoresB: (number | null)[];
+  fines: Fine[];
+}
+
 export default function Session() {
   const navigate = useNavigate();
   const [currentMatch, setCurrentMatch] = useState(1);
@@ -45,6 +56,8 @@ export default function Session() {
   const [fines, setFines] = useState<Fine[]>([]);
   const [matchResults, setMatchResults] = useState<MatchResult[]>([]);
   const [playerWins, setPlayerWins] = useState<PlayerWins>({});
+  const [showWinnerAnimation, setShowWinnerAnimation] = useState(false);
+  const [winnerTeamNames, setWinnerTeamNames] = useState('');
 
   const totalMatches = 5;
   const totalRounds = 8;
@@ -57,9 +70,45 @@ export default function Session() {
 
   const currentStepIndex = steps.findIndex(s => s.key === step);
 
+  // Check if all rounds have scores
+  const allRoundsComplete = scoresA.every(s => s !== null);
+
   const handlePrevStep = () => {
-    if (step === 'teams') setStep('players');
-    else if (step === 'points') setStep('teams');
+    if (step === 'teams') {
+      if (currentMatch > 1) {
+        // Go back to previous match's points step
+        const prevResult = matchResults[currentMatch - 2];
+        if (prevResult) {
+          // Restore previous match data
+          setCurrentMatch(currentMatch - 1);
+          setTeamA(prevResult.teamA);
+          setTeamB(prevResult.teamB);
+          // Reconstruct scores from totals (we need to store full scores in results)
+          setScoresA(Array(8).fill(null));
+          setScoresB(Array(8).fill(null));
+          setFines(prevResult.fines);
+          setStep('points');
+          // Remove this result from matchResults
+          setMatchResults(matchResults.slice(0, -1));
+          // Recalculate player wins
+          const newPlayerWins = { ...playerWins };
+          if (prevResult.winner === 'A') {
+            prevResult.teamA.forEach(playerId => {
+              newPlayerWins[playerId] = Math.max(0, (newPlayerWins[playerId] || 0) - 1);
+            });
+          } else if (prevResult.winner === 'B') {
+            prevResult.teamB.forEach(playerId => {
+              newPlayerWins[playerId] = Math.max(0, (newPlayerWins[playerId] || 0) - 1);
+            });
+          }
+          setPlayerWins(newPlayerWins);
+        }
+      } else {
+        setStep('players');
+      }
+    } else if (step === 'points') {
+      setStep('teams');
+    }
   };
 
   const handleNextStep = () => {
@@ -67,6 +116,8 @@ export default function Session() {
     else if (step === 'teams') setStep('points');
     else if (step === 'points') {
       // Determine winner and update wins
+      const teamATotal = scoresA.reduce((sum, s) => sum + (s ?? 0), 0);
+      const teamBTotal = scoresB.reduce((sum, s) => sum + (s ?? 0), 0);
       const winner = teamATotal > teamBTotal ? 'A' : teamBTotal > teamATotal ? 'B' : 'tie';
       const result: MatchResult = {
         teamA: [...teamA],
@@ -92,21 +143,61 @@ export default function Session() {
       setMatchResults([...matchResults, result]);
       setPlayerWins(newPlayerWins);
       
-      if (currentMatch < totalMatches) {
-        setCurrentMatch(currentMatch + 1);
-        setStep('teams');
-        setScoresA(Array(8).fill(null));
-        setScoresB(Array(8).fill(null));
-        setFines([]);
-      } else {
-        // Navigate to summary with ranking data
-        navigate('/summary', { state: { matchResults: [...matchResults, result], playerWins: newPlayerWins } });
-      }
+      // Show winner animation
+      const winnerNames = winner === 'A' 
+        ? teamA.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')
+        : winner === 'B'
+        ? teamB.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')
+        : 'Unentschieden';
+      setWinnerTeamNames(winnerNames);
+      setShowWinnerAnimation(true);
+      
+      // After animation, continue
+      setTimeout(() => {
+        setShowWinnerAnimation(false);
+        if (currentMatch < totalMatches) {
+          setCurrentMatch(currentMatch + 1);
+          setStep('teams');
+          setScoresA(Array(8).fill(null));
+          setScoresB(Array(8).fill(null));
+          setFines([]);
+        } else {
+          // Navigate to summary with ranking data
+          navigate('/summary', { state: { matchResults: [...matchResults, result], playerWins: newPlayerWins } });
+        }
+      }, 3000);
     }
   };
 
   const teamATotal = scoresA.reduce((sum, s) => sum + (s ?? 0), 0);
   const teamBTotal = scoresB.reduce((sum, s) => sum + (s ?? 0), 0);
+
+  // Winner Animation Overlay
+  if (showWinnerAnimation) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95">
+        <div className="text-center space-y-6 animate-scale-in">
+          <div className="flex items-center justify-center gap-4">
+            <Sparkles className="h-12 w-12 text-yellow-500 animate-bounce" style={{ animationDelay: '0s' }} />
+            <Trophy className="h-20 w-20 text-primary animate-bounce" style={{ animationDelay: '0.1s' }} />
+            <Sparkles className="h-12 w-12 text-yellow-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xl text-muted-foreground">Match {currentMatch} Gewinner</p>
+            <h1 className="text-4xl font-bold text-primary">
+              🎉 {winnerTeamNames} 🎉
+            </h1>
+          </div>
+          <div className="flex justify-center gap-8 text-2xl font-bold">
+            <span className="text-primary">{teamATotal}</span>
+            <span className="text-muted-foreground">:</span>
+            <span className="text-muted-foreground">{teamBTotal}</span>
+          </div>
+          <PartyPopper className="h-16 w-16 text-primary mx-auto animate-bounce" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -158,6 +249,7 @@ export default function Session() {
           onNext={handleNextStep}
           onPrev={handlePrevStep}
           matchNumber={currentMatch}
+          canGoBack={currentMatch > 1 || true}
         />
       )}
 
@@ -193,6 +285,7 @@ export default function Session() {
           fines={fines}
           onAddFine={(fine) => setFines([...fines, { ...fine, id: Date.now().toString() }])}
           onRemoveFine={(id) => setFines(fines.filter(f => f.id !== id))}
+          allRoundsComplete={allRoundsComplete}
         />
       )}
 
@@ -261,6 +354,7 @@ function TeamsStep({
   onNext,
   onPrev,
   matchNumber,
+  canGoBack,
 }: {
   players: Player[];
   teamA: string[];
@@ -270,6 +364,7 @@ function TeamsStep({
   onNext: () => void;
   onPrev: () => void;
   matchNumber: number;
+  canGoBack: boolean;
 }) {
   const availableForA = players.filter(p => !teamB.includes(p.id));
   const availableForB = players.filter(p => !teamA.includes(p.id));
@@ -379,6 +474,7 @@ function PointsStep({
   fines,
   onAddFine,
   onRemoveFine,
+  allRoundsComplete,
 }: {
   scoresA: (number | null)[];
   scoresB: (number | null)[];
@@ -394,6 +490,7 @@ function PointsStep({
   fines: Fine[];
   onAddFine: (fine: Omit<Fine, 'id'>) => void;
   onRemoveFine: (id: string) => void;
+  allRoundsComplete: boolean;
 }) {
   const [expandedRound, setExpandedRound] = useState<number | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState('');
@@ -738,11 +835,20 @@ function PointsStep({
                 <ChevronLeft className="h-4 w-4" />
                 Zurück
               </Button>
-              <Button className="flex-1 gap-2" onClick={onNext}>
+              <Button 
+                className="flex-1 gap-2" 
+                onClick={onNext}
+                disabled={!allRoundsComplete}
+              >
                 Nächstes Match
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
+            {!allRoundsComplete && (
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Alle 8 Runden müssen ausgefüllt sein
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
