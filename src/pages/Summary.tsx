@@ -19,7 +19,22 @@ interface Fine {
   location?: string;
 }
 
+interface HistorySession {
+  id: string;
+  date: string;
+  location: string;
+  players: {
+    name: string;
+    rank: number;
+    wins: number;
+    totalFines: number;
+  }[];
+  totalPot: number;
+  matchCount: number;
+}
+
 interface LocationState {
+  // From Session wizard
   matchResults?: Array<{
     teamA: string[];
     teamB: string[];
@@ -31,6 +46,9 @@ interface LocationState {
     matchNumber?: number;
   }>;
   playerWins?: { [playerId: string]: number };
+  // From History page
+  fromHistory?: boolean;
+  historySession?: HistorySession;
 }
 
 interface RankingPlayer {
@@ -77,52 +95,100 @@ export default function Summary() {
     startRank: number;
     players: RankingPlayer[];
   }>>([]);
+  const [sessionDate, setSessionDate] = useState<Date>(new Date());
+  const [sessionLocation, setSessionLocation] = useState<string>('');
 
-  // Initialize rankings from match wins
+  // Initialize rankings from match wins OR history data
   useEffect(() => {
-    const initialRankings = state?.playerWins
-      ? PLAYERS
-          .map(player => ({
-            playerId: player.id,
-            name: player.name,
-            wins: state.playerWins?.[player.id] || 0,
-            rank: 0,
-          }))
-          .sort((a, b) => b.wins - a.wins)
-          .map((player, index) => ({ ...player, rank: index + 1 }))
-      : PLACEHOLDER_SUMMARY.rankings;
+    let initialRankings: RankingPlayer[];
+    
+    if (state?.fromHistory && state.historySession) {
+      // Data from History page - use as-is (already resolved)
+      const historyPlayers = state.historySession.players;
+      initialRankings = historyPlayers.map((p, idx) => ({
+        playerId: String(idx + 1),
+        name: p.name,
+        wins: p.wins,
+        rank: p.rank,
+      }));
+      setSessionDate(new Date(state.historySession.date));
+      setSessionLocation(state.historySession.location);
+      
+      // For history sessions, check if there were ties that need to be shown
+      // (only show tiebreaker if not already resolved in the stored data)
+      // Find tie groups from original wins (before manual resolution)
+      const winGroups: { [wins: number]: RankingPlayer[] } = {};
+      initialRankings.forEach(player => {
+        if (!winGroups[player.wins]) {
+          winGroups[player.wins] = [];
+        }
+        winGroups[player.wins].push(player);
+      });
+      
+      const groups: Array<{ wins: number; startRank: number; players: RankingPlayer[] }> = [];
+      Object.entries(winGroups)
+        .filter(([_, players]) => players.length > 1)
+        .sort(([a], [b]) => Number(b) - Number(a))
+        .forEach(([wins, players]) => {
+          const startRank = Math.min(...players.map(p => p.rank));
+          groups.push({
+            wins: Number(wins),
+            startRank,
+            players: players.sort((a, b) => a.rank - b.rank),
+          });
+        });
+      
+      // Show tiebreaker for historical sessions with ties
+      if (groups.length > 0) {
+        setTieGroups(groups);
+        setShowTiebreaker(true);
+      }
+      
+    } else if (state?.playerWins) {
+      // Data from Session wizard
+      initialRankings = PLAYERS
+        .map(player => ({
+          playerId: player.id,
+          name: player.name,
+          wins: state.playerWins?.[player.id] || 0,
+          rank: 0,
+        }))
+        .sort((a, b) => b.wins - a.wins)
+        .map((player, index) => ({ ...player, rank: index + 1 }));
+      
+      // Find tie groups
+      const winGroups: { [wins: number]: RankingPlayer[] } = {};
+      initialRankings.forEach(player => {
+        if (!winGroups[player.wins]) {
+          winGroups[player.wins] = [];
+        }
+        winGroups[player.wins].push(player);
+      });
+      
+      const groups: Array<{ wins: number; startRank: number; players: RankingPlayer[] }> = [];
+      Object.entries(winGroups)
+        .filter(([_, players]) => players.length > 1)
+        .sort(([a], [b]) => Number(b) - Number(a))
+        .forEach(([wins, players]) => {
+          const startRank = Math.min(...players.map(p => p.rank));
+          groups.push({
+            wins: Number(wins),
+            startRank,
+            players: players.sort((a, b) => a.rank - b.rank),
+          });
+        });
+      
+      if (groups.length > 0) {
+        setTieGroups(groups);
+        setShowTiebreaker(true);
+      }
+    } else {
+      // Fallback placeholder
+      initialRankings = PLACEHOLDER_SUMMARY.rankings;
+    }
     
     setRankings(initialRankings);
-    
-    // Find tie groups - groups of players with same wins
-    const winGroups: { [wins: number]: RankingPlayer[] } = {};
-    initialRankings.forEach(player => {
-      if (!winGroups[player.wins]) {
-        winGroups[player.wins] = [];
-      }
-      winGroups[player.wins].push(player);
-    });
-    
-    // Create tie groups (only for groups with more than 1 player)
-    const groups: Array<{ wins: number; startRank: number; players: RankingPlayer[] }> = [];
-    
-    Object.entries(winGroups)
-      .filter(([_, players]) => players.length > 1)
-      .sort(([a], [b]) => Number(b) - Number(a)) // Sort by wins descending
-      .forEach(([wins, players]) => {
-        const startRank = Math.min(...players.map(p => p.rank));
-        groups.push({
-          wins: Number(wins),
-          startRank,
-          players: players.sort((a, b) => a.rank - b.rank),
-        });
-      });
-    
-    if (groups.length > 0) {
-      setTieGroups(groups);
-      setShowTiebreaker(true);
-    }
-  }, [state?.playerWins]);
+  }, [state]);
 
   // Collect all fines from match results with location info
   const allFines: Fine[] = state?.matchResults
@@ -203,12 +269,18 @@ export default function Summary() {
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">Zusammenfassung</h1>
-        <div className="flex items-center gap-4 text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
           <span>Übersicht des Jass-Abends</span>
           <span className="flex items-center gap-1.5">
             <Calendar className="h-4 w-4" />
-            {format(new Date(), "EEEE, d. MMMM yyyy", { locale: de })}
+            {format(sessionDate, "EEEE, d. MMMM yyyy", { locale: de })}
           </span>
+          {sessionLocation && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4" />
+              {sessionLocation}
+            </span>
+          )}
         </div>
       </div>
 
