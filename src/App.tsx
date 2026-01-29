@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./hooks/useAuth";
 import { Layout } from "./components/Layout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -21,33 +20,30 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/dashboard" element={<Navigate to="/" replace />} />
-                <Route path="/session" element={<Session />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/summary" element={<Summary />} />
-                <Route path="/summary/:id" element={<Summary />} />
-                <Route path="/rangliste" element={<Rangliste />} />
-                <Route path="/statuten" element={<Statuten />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/wheel-demo" element={<WheelDemo />} />
-              </Route>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/session" element={<Session />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/summary" element={<Summary />} />
+              <Route path="/summary/:id" element={<Summary />} />
+              <Route path="/rangliste" element={<Rangliste />} />
+              <Route path="/statuten" element={<Statuten />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/wheel-demo" element={<WheelDemo />} />
             </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
