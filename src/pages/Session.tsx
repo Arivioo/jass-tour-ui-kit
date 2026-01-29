@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Users, Trophy, Calculator, AlertCircle, ChevronRight, X, Plus, Skull, PartyPopper } from 'lucide-react';
+import { Users, Trophy, Calculator, AlertCircle, ChevronRight, ChevronLeft, X, Plus, Skull, PartyPopper } from 'lucide-react';
 import { PLAYERS, FINE_TYPES, formatCHF, type Player } from '@/lib/players';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +19,20 @@ interface Fine {
   note?: string;
 }
 
+interface MatchResult {
+  teamA: string[];
+  teamB: string[];
+  teamATotal: number;
+  teamBTotal: number;
+  winner: 'A' | 'B' | 'tie';
+  fines: Fine[];
+}
+
+// Track wins per player (1 point per match win)
+interface PlayerWins {
+  [playerId: string]: number;
+}
+
 export default function Session() {
   const navigate = useNavigate();
   const [currentMatch, setCurrentMatch] = useState(1);
@@ -29,6 +43,8 @@ export default function Session() {
   const [scoresA, setScoresA] = useState<(number | null)[]>(Array(8).fill(null));
   const [scoresB, setScoresB] = useState<(number | null)[]>(Array(8).fill(null));
   const [fines, setFines] = useState<Fine[]>([]);
+  const [matchResults, setMatchResults] = useState<MatchResult[]>([]);
+  const [playerWins, setPlayerWins] = useState<PlayerWins>({});
 
   const totalMatches = 5;
   const totalRounds = 8;
@@ -41,17 +57,50 @@ export default function Session() {
 
   const currentStepIndex = steps.findIndex(s => s.key === step);
 
+  const handlePrevStep = () => {
+    if (step === 'teams') setStep('players');
+    else if (step === 'points') setStep('teams');
+  };
+
   const handleNextStep = () => {
     if (step === 'players') setStep('teams');
     else if (step === 'teams') setStep('points');
     else if (step === 'points') {
+      // Determine winner and update wins
+      const winner = teamATotal > teamBTotal ? 'A' : teamBTotal > teamATotal ? 'B' : 'tie';
+      const result: MatchResult = {
+        teamA: [...teamA],
+        teamB: [...teamB],
+        teamATotal,
+        teamBTotal,
+        winner,
+        fines: [...fines],
+      };
+      
+      // Update player wins (1 point per match win)
+      const newPlayerWins = { ...playerWins };
+      if (winner === 'A') {
+        teamA.forEach(playerId => {
+          newPlayerWins[playerId] = (newPlayerWins[playerId] || 0) + 1;
+        });
+      } else if (winner === 'B') {
+        teamB.forEach(playerId => {
+          newPlayerWins[playerId] = (newPlayerWins[playerId] || 0) + 1;
+        });
+      }
+      
+      setMatchResults([...matchResults, result]);
+      setPlayerWins(newPlayerWins);
+      
       if (currentMatch < totalMatches) {
         setCurrentMatch(currentMatch + 1);
         setStep('teams');
         setScoresA(Array(8).fill(null));
         setScoresB(Array(8).fill(null));
+        setFines([]);
       } else {
-        navigate('/summary');
+        // Navigate to summary with ranking data
+        navigate('/summary', { state: { matchResults: [...matchResults, result], playerWins: newPlayerWins } });
       }
     }
   };
@@ -107,6 +156,7 @@ export default function Session() {
           onTeamAChange={setTeamA}
           onTeamBChange={setTeamB}
           onNext={handleNextStep}
+          onPrev={handlePrevStep}
           matchNumber={currentMatch}
         />
       )}
@@ -138,6 +188,7 @@ export default function Session() {
           teamANames={teamA.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')}
           teamBNames={teamB.map(id => PLAYERS.find(p => p.id === id)?.name || '').join(' & ')}
           onNext={handleNextStep}
+          onPrev={handlePrevStep}
           players={PLAYERS.filter(p => activePlayers.includes(p.id))}
           fines={fines}
           onAddFine={(fine) => setFines([...fines, { ...fine, id: Date.now().toString() }])}
@@ -208,6 +259,7 @@ function TeamsStep({
   onTeamAChange,
   onTeamBChange,
   onNext,
+  onPrev,
   matchNumber,
 }: {
   players: Player[];
@@ -216,6 +268,7 @@ function TeamsStep({
   onTeamAChange: (ids: string[]) => void;
   onTeamBChange: (ids: string[]) => void;
   onNext: () => void;
+  onPrev: () => void;
   matchNumber: number;
 }) {
   const availableForA = players.filter(p => !teamB.includes(p.id));
@@ -288,14 +341,24 @@ function TeamsStep({
           </div>
         </div>
 
-        <Button 
-          className="w-full gap-2" 
-          onClick={onNext}
-          disabled={teamA.length < 2 || teamB.length < 2}
-        >
-          Weiter
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            className="gap-2" 
+            onClick={onPrev}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Zurück
+          </Button>
+          <Button 
+            className="flex-1 gap-2" 
+            onClick={onNext}
+            disabled={teamA.length < 2 || teamB.length < 2}
+          >
+            Weiter
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -311,6 +374,7 @@ function PointsStep({
   teamANames,
   teamBNames,
   onNext,
+  onPrev,
   players,
   fines,
   onAddFine,
@@ -325,6 +389,7 @@ function PointsStep({
   teamANames: string;
   teamBNames: string;
   onNext: () => void;
+  onPrev: () => void;
   players: Player[];
   fines: Fine[];
   onAddFine: (fine: Omit<Fine, 'id'>) => void;
@@ -668,10 +733,16 @@ function PointsStep({
               <span>Total</span>
               <span className="text-muted-foreground">{teamBTotal}</span>
             </div>
-            <Button className="w-full gap-2" onClick={onNext}>
-              Nächstes Match
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="gap-2" onClick={onPrev}>
+                <ChevronLeft className="h-4 w-4" />
+                Zurück
+              </Button>
+              <Button className="flex-1 gap-2" onClick={onNext}>
+                Nächstes Match
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
