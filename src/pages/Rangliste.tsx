@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Info, Loader2, TrendingUp, Calendar, Medal, Flame, Target, Frown, Crown, Zap, Timer } from 'lucide-react';
+import { Trophy, Info, Loader2, TrendingUp, Calendar, Medal, Flame, Target, Frown, Crown, Zap, Snowflake, Heart, Shuffle, Award, Star, ThumbsDown, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -281,7 +281,7 @@ export default function Rangliste() {
 
         {/* Tab: Statistiken */}
         <TabsContent value="statistiken" className="space-y-4">
-          {/* Fun Awards */}
+          {/* Fun Awards - max 2 mentions per player */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -290,48 +290,37 @@ export default function Rangliste() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <AwardCard 
-                icon={Crown} 
-                title="👑 Jass-König" 
-                winner={funStats.king.name}
-                description={`${funStats.king.value} Siege total`}
-                color="text-yellow-600"
-              />
-              <AwardCard 
-                icon={Frown} 
-                title="😢 Pechvogel" 
-                winner={funStats.unlucky.name}
-                description={`${funStats.unlucky.value}x letzter Platz`}
-                color="text-red-500"
-              />
-              <AwardCard 
-                icon={Target} 
-                title="🎯 Konstant" 
-                winner={funStats.consistent.name}
-                description={`Durchschnitt: ${funStats.consistent.value.toFixed(2)}`}
-                color="text-blue-600"
-              />
-              <AwardCard 
-                icon={Zap} 
-                title="⚡ Comeback-King" 
-                winner={funStats.comebackKing.name}
-                description={funStats.comebackKing.description}
-                color="text-purple-600"
-              />
-              <AwardCard 
-                icon={Flame} 
-                title="🔥 Heisse Phase" 
-                winner={funStats.hotStreak.name}
-                description={funStats.hotStreak.description}
-                color="text-orange-600"
-              />
-              <AwardCard 
-                icon={Timer} 
-                title="🕐 Jass-Veteran" 
-                winner={funStats.veteran.name}
-                description={funStats.veteran.description}
-                color="text-green-600"
-              />
+              {funStats.awards.map((award, index) => (
+                <AwardCard 
+                  key={index}
+                  icon={award.icon} 
+                  title={award.title} 
+                  winner={award.winner}
+                  description={award.description}
+                  color={award.color}
+                />
+              ))}
+            </CardContent>
+          </Card>
+          
+          {/* Fun Comparisons */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Kuriose Statistiken 🤔
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {funStats.funComparisons.map((comp, index) => (
+                <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <div className="text-2xl">{comp.emoji}</div>
+                  <div>
+                    <div className="font-medium">{comp.title}</div>
+                    <div className="text-sm text-muted-foreground">{comp.description}</div>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
@@ -543,37 +532,116 @@ function AwardCard({
 }
 
 function calculateFunStats(rankings: PlayerStats[], allRankings: any[]) {
-  // King - most wins
-  const king = rankings.reduce((best, p) => p.rank1 > best.rank1 ? p : best, rankings[0] || { name: '-', rank1: 0 });
-  
-  // Unlucky - most 4th places
-  const unlucky = rankings.reduce((best, p) => p.rank4 > best.rank4 ? p : best, rankings[0] || { name: '-', rank4: 0 });
-  
-  // Consistent - lowest average rank deviation
-  const consistent = rankings.reduce((best, p) => {
+  if (rankings.length === 0) {
+    return { awards: [], funComparisons: [] };
+  }
+
+  // Track mentions per player (max 2)
+  const mentions: { [key: string]: number } = {};
+  const canMention = (name: string) => (mentions[name] || 0) < 2;
+  const addMention = (name: string) => { mentions[name] = (mentions[name] || 0) + 1; };
+
+  // Calculate all stats
+  const statsWithCalc = rankings.map(p => {
     const total = p.rank1 + p.rank2 + p.rank3 + p.rank4;
     const avg = total > 0 ? (p.rank1 * 1 + p.rank2 * 2 + p.rank3 * 3 + p.rank4 * 4) / total : 10;
-    const bestTotal = best.rank1 + best.rank2 + best.rank3 + best.rank4;
-    const bestAvg = bestTotal > 0 ? (best.rank1 * 1 + best.rank2 * 2 + best.rank3 * 3 + best.rank4 * 4) / bestTotal : 10;
-    return avg < bestAvg ? p : best;
-  }, rankings[0] || { name: '-', rank1: 0, rank2: 0, rank3: 0, rank4: 0 });
-  
-  const consistentTotal = consistent.rank1 + consistent.rank2 + consistent.rank3 + consistent.rank4;
-  const consistentAvg = consistentTotal > 0 
-    ? (consistent.rank1 * 1 + consistent.rank2 * 2 + consistent.rank3 * 3 + consistent.rank4 * 4) / consistentTotal 
-    : 0;
+    const winRate = total > 0 ? (p.rank1 / total) * 100 : 0;
+    const podiumRate = total > 0 ? ((p.rank1 + p.rank2 + p.rank3) / total) * 100 : 0;
+    const lastPlaceRate = total > 0 ? (p.rank4 / total) * 100 : 0;
+    return { ...p, avg, winRate, podiumRate, lastPlaceRate, total };
+  });
 
-  // Veteran - most sessions
-  const veteran = rankings.reduce((best, p) => p.totalSessions > best.totalSessions ? p : best, rankings[0] || { name: '-', totalSessions: 0 });
+  const awards: Array<{icon: React.ElementType; title: string; winner: string; description: string; color: string}> = [];
 
-  // Hot streak & Comeback - these would need session-by-session data which is complex
-  // For now, use placeholder data based on known facts
-  return {
-    king: { name: king.name, value: king.rank1 },
-    unlucky: { name: unlucky.name, value: unlucky.rank4 },
-    consistent: { name: consistent.name, value: consistentAvg },
-    veteran: { name: veteran.name, description: `${veteran.totalSessions} Abende` },
-    comebackKing: { name: 'Mötzi', description: 'Von 0 auf 3 Siege seit 2021' },
-    hotStreak: { name: 'Rötschi', description: '3 Siege in Folge (2023)' },
-  };
+  // 1. Jass-König (most wins)
+  const king = statsWithCalc.reduce((best, p) => p.rank1 > best.rank1 ? p : best);
+  if (canMention(king.name)) {
+    awards.push({ icon: Crown, title: '👑 Jass-König', winner: king.name, description: `${king.rank1} Siege total`, color: 'text-yellow-600' });
+    addMention(king.name);
+  }
+
+  // 2. Pechvogel (most 4th places)
+  const unlucky = statsWithCalc.reduce((best, p) => p.rank4 > best.rank4 ? p : best);
+  if (canMention(unlucky.name)) {
+    awards.push({ icon: Frown, title: '😢 Pechvogel', winner: unlucky.name, description: `${unlucky.rank4}x letzter Platz`, color: 'text-red-500' });
+    addMention(unlucky.name);
+  }
+
+  // 3. Silber-Sammler (most 2nd places)
+  const silverCollector = statsWithCalc.reduce((best, p) => p.rank2 > best.rank2 ? p : best);
+  if (canMention(silverCollector.name)) {
+    awards.push({ icon: Award, title: '🥈 Silber-Sammler', winner: silverCollector.name, description: `${silverCollector.rank2}x zweiter Platz`, color: 'text-gray-500' });
+    addMention(silverCollector.name);
+  }
+
+  // 4. Bronzener Held (most 3rd places)
+  const bronzeHero = statsWithCalc.reduce((best, p) => p.rank3 > best.rank3 ? p : best);
+  if (canMention(bronzeHero.name)) {
+    awards.push({ icon: Medal, title: '🥉 Bronze-Held', winner: bronzeHero.name, description: `${bronzeHero.rank3}x dritter Platz`, color: 'text-orange-600' });
+    addMention(bronzeHero.name);
+  }
+
+  // 5. Heisse Phase (consecutive wins) - Rötschi had 3 in 2023
+  const hotStreak = statsWithCalc.find(p => p.name === 'Rötschi');
+  if (hotStreak && canMention(hotStreak.name)) {
+    awards.push({ icon: Flame, title: '🔥 Heisse Phase', winner: hotStreak.name, description: '3 Siege in Folge (2023)', color: 'text-orange-600' });
+    addMention(hotStreak.name);
+  }
+
+  // 6. Newcomer Award - Mötzi (started 2021, already 3 wins)
+  const newcomer = statsWithCalc.find(p => p.name === 'Mötzi');
+  if (newcomer && canMention(newcomer.name)) {
+    awards.push({ icon: Star, title: '⭐ Newcomer', winner: newcomer.name, description: `${newcomer.rank1} Siege seit 2021`, color: 'text-purple-600' });
+    addMention(newcomer.name);
+  }
+
+  // 7. Eiskalter Killer (best win rate among active)
+  const coldKiller = statsWithCalc.filter(p => p.total >= 10).reduce((best, p) => p.winRate > best.winRate ? p : best, statsWithCalc[0]);
+  if (canMention(coldKiller.name)) {
+    awards.push({ icon: Snowflake, title: '🧊 Eiskalt', winner: coldKiller.name, description: `${coldKiller.winRate.toFixed(0)}% Siegquote`, color: 'text-blue-500' });
+    addMention(coldKiller.name);
+  }
+
+  // 8. Podiums-Garant (best podium rate)
+  const podiumKing = statsWithCalc.filter(p => p.total >= 10).reduce((best, p) => p.podiumRate > best.podiumRate ? p : best, statsWithCalc[0]);
+  if (canMention(podiumKing.name)) {
+    awards.push({ icon: Target, title: '🎯 Podiums-Garant', winner: podiumKing.name, description: `${podiumKing.podiumRate.toFixed(0)}% auf Podium`, color: 'text-green-600' });
+    addMention(podiumKing.name);
+  }
+
+  // Fun comparisons
+  const funComparisons = [
+    {
+      emoji: '🎲',
+      title: 'Wahrscheinlichkeit von Rötschis Dominanz',
+      description: `Bei reinem Zufall hätte Rötschi 8.5 Siege erwartet – er hat ${king.rank1}. Das ist statistisch signifikant!`
+    },
+    {
+      emoji: '📊',
+      title: 'Polettis Konstanz',
+      description: `${unlucky.rank4}x letzter, aber auch ${unlucky.rank1}x erster – die grösste Bandbreite aller Spieler`
+    },
+    {
+      emoji: '⚡',
+      title: 'Mötzi vs. Michi',
+      description: 'Beide haben 17 Abende gespielt – nur in verschiedenen Ären (2015-20 vs. 2021+)'
+    },
+    {
+      emoji: '🏆',
+      title: 'Rötschi = 38% aller Siege',
+      description: `${king.rank1} von 34 Abenden gewonnen – fast 4 von 10!`
+    },
+    {
+      emoji: '💪',
+      title: 'Husi der Beständige',
+      description: `Nie weniger als 5x pro Rang – der ausgeglichenste Spieler`
+    },
+    {
+      emoji: '🎯',
+      title: 'Nur 2 Spieler',
+      description: 'Rötschi und Husi haben alle 34 Abende zusammen bestritten'
+    }
+  ];
+
+  return { awards, funComparisons };
 }
