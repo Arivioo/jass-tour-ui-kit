@@ -3,7 +3,7 @@ import { Home, Play, History, Trophy, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { to: '/dashboard', icon: Home, label: 'Start' },
+  { to: '/', icon: Home, label: 'Start' },
   { to: '/session', icon: Play, label: 'Session' },
   { to: '/history', icon: History, label: 'Abende' },
   { to: '/rangliste', icon: Trophy, label: 'Rangliste' },
@@ -17,6 +17,7 @@ export function BottomNav() {
         <NavLink
           key={item.to}
           to={item.to}
+          end={item.to === '/'}
           className={({ isActive }) =>
             cn(
               'flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors',

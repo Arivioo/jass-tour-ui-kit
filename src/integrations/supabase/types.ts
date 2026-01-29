@@ -14,7 +14,200 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      match_results: {
+        Row: {
+          created_at: string
+          fines: number
+          id: string
+          is_winner: boolean
+          match_id: string
+          player_id: string
+        }
+        Insert: {
+          created_at?: string
+          fines?: number
+          id?: string
+          is_winner?: boolean
+          match_id: string
+          player_id: string
+        }
+        Update: {
+          created_at?: string
+          fines?: number
+          id?: string
+          is_winner?: boolean
+          match_id?: string
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_results_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_results_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matches: {
+        Row: {
+          created_at: string
+          id: string
+          match_number: number
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_number: number
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_number?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      session_rankings: {
+        Row: {
+          created_at: string
+          final_rank: number
+          id: string
+          player_id: string
+          session_id: string
+          total_fines: number
+          total_wins: number
+        }
+        Insert: {
+          created_at?: string
+          final_rank: number
+          id?: string
+          player_id: string
+          session_id: string
+          total_fines?: number
+          total_wins?: number
+        }
+        Update: {
+          created_at?: string
+          final_rank?: number
+          id?: string
+          player_id?: string
+          session_id?: string
+          total_fines?: number
+          total_wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_rankings_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_rankings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          is_completed: boolean
+          location: string
+          total_pot: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          is_completed?: boolean
+          location: string
+          total_pot?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          is_completed?: boolean
+          location?: string
+          total_pot?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
