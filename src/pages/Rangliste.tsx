@@ -461,14 +461,27 @@ export default function Rangliste() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions.map((session) => {
+                      {sessions.map((session, index) => {
                         const getRankPlayer = (rank: number) => 
                           session.rankings.find(r => r.rank === rank)?.playerName || '-';
+                        
+                        // Calculate running total from this session onwards (sessions are sorted desc)
+                        const sessionDate = new Date(session.date);
+                        const cutoffDate = new Date('2026-01-16');
+                        const showKasse = sessionDate >= cutoffDate;
+                        
+                        // Calculate total: sum of all sessions from this one to the latest
+                        const runningTotal = showKasse 
+                          ? sessions
+                              .filter(s => new Date(s.date) >= cutoffDate)
+                              .slice(0, sessions.findIndex(s => s.id === session.id) + 1)
+                              .reduce((sum, s) => sum + s.totalPot, 0)
+                          : 0;
                         
                         return (
                           <TableRow key={session.id}>
                             <TableCell className="font-medium whitespace-nowrap">
-                              {new Date(session.date).toLocaleDateString('de-CH', {
+                              {sessionDate.toLocaleDateString('de-CH', {
                                 day: '2-digit',
                                 month: '2-digit',
                                 year: 'numeric'
@@ -486,8 +499,15 @@ export default function Rangliste() {
                             <TableCell className="text-center text-muted-foreground">
                               {getRankPlayer(4)}
                             </TableCell>
-                            <TableCell className="text-right text-muted-foreground">
-                              {session.totalPot > 0 ? `CHF ${session.totalPot.toLocaleString()}` : '-'}
+                            <TableCell className="text-right text-muted-foreground text-xs">
+                              {showKasse ? (
+                                <div>
+                                  <div>CHF {session.totalPot}</div>
+                                  <div className="font-medium text-foreground">Total: {runningTotal}</div>
+                                </div>
+                              ) : (
+                                '-'
+                              )}
                             </TableCell>
                           </TableRow>
                         );
