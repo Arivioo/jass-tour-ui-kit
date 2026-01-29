@@ -618,8 +618,8 @@ function calculateFunStats(rankings: PlayerStats[], allRankings: any[]) {
     },
     {
       emoji: '📊',
-      title: 'Polettis Konstanz',
-      description: `${unlucky.rank4}x letzter, aber auch ${unlucky.rank1}x erster – die grösste Bandbreite aller Spieler`
+      title: 'Polis Extreme',
+      description: `${unlucky.rank4}x letzter, aber auch ${unlucky.rank1}x erster – grosse Bandbreite!`
     },
     {
       emoji: '⚡',
@@ -632,14 +632,14 @@ function calculateFunStats(rankings: PlayerStats[], allRankings: any[]) {
       description: `${king.rank1} von 34 Abenden gewonnen – fast 4 von 10!`
     },
     {
-      emoji: '💪',
-      title: 'Husi der Beständige',
-      description: `Nie weniger als 5x pro Rang – der ausgeglichenste Spieler`
+      emoji: '🎰',
+      title: 'Wer gewinnt öfter nach einem 4. Platz?',
+      description: 'Husi schafft es am häufigsten, nach einem letzten Platz zurückzuschlagen'
     },
     {
-      emoji: '🎯',
-      title: 'Nur 2 Spieler',
-      description: 'Rötschi und Husi haben alle 34 Abende zusammen bestritten'
+      emoji: '📅',
+      title: '10+ Jahre Jass-Geschichte',
+      description: 'Von Februar 2015 bis Januar 2026 – über ein Jahrzehnt Tradition!'
     }
   ];
 
