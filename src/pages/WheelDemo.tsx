@@ -2,211 +2,230 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowLeft, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LuckyWheel } from '@/components/LuckyWheel';
 
 interface Player {
   playerId: string;
   name: string;
   wins: number;
+  rank: number;
 }
 
-const WHEEL_COLORS = [
-  'hsl(0, 84%, 60%)',      // Red
-  'hsl(45, 93%, 47%)',     // Orange/Yellow
-  'hsl(142, 76%, 36%)',    // Green
-  'hsl(217, 91%, 60%)',    // Blue
-];
-
-// Create SVG arc path for a pie segment
-function createArcPath(
-  centerX: number,
-  centerY: number,
-  radius: number,
-  startAngle: number,
-  endAngle: number
-): string {
-  const startRad = (startAngle - 90) * (Math.PI / 180);
-  const endRad = (endAngle - 90) * (Math.PI / 180);
-  
-  const x1 = centerX + radius * Math.cos(startRad);
-  const y1 = centerY + radius * Math.sin(startRad);
-  const x2 = centerX + radius * Math.cos(endRad);
-  const y2 = centerY + radius * Math.sin(endRad);
-  
-  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-  
-  return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+interface TieGroup {
+  wins: number;
+  startRank: number;
+  players: Player[];
 }
 
-// Get text position for a segment
-function getTextPosition(
-  centerX: number,
-  centerY: number,
-  radius: number,
-  startAngle: number,
-  endAngle: number
-): { x: number; y: number; rotation: number } {
-  const midAngle = (startAngle + endAngle) / 2;
-  const rad = (midAngle - 90) * (Math.PI / 180);
-  const textRadius = radius * 0.6;
-  
-  return {
-    x: centerX + textRadius * Math.cos(rad),
-    y: centerY + textRadius * Math.sin(rad),
-    rotation: midAngle,
-  };
-}
+// Demo scenarios
+const SCENARIO_2_PLAYERS: { tieGroups: TieGroup[]; allPlayers: Player[] } = {
+  tieGroups: [
+    { wins: 2, startRank: 1, players: [
+      { playerId: '1', name: 'Mötzi', wins: 2, rank: 1 },
+      { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
+    ]},
+  ],
+  allPlayers: [
+    { playerId: '1', name: 'Mötzi', wins: 2, rank: 1 },
+    { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
+    { playerId: '3', name: 'Husi', wins: 1, rank: 3 },
+    { playerId: '4', name: 'Rötschi', wins: 0, rank: 4 },
+  ],
+};
 
-function DemoWheel({ players, title }: { players: Player[]; title: string }) {
-  const [rotation, setRotation] = useState(0);
-  const [isSpinning, setIsSpinning] = useState(false);
+const SCENARIO_3_PLAYERS: { tieGroups: TieGroup[]; allPlayers: Player[] } = {
+  tieGroups: [
+    { wins: 2, startRank: 1, players: [
+      { playerId: '1', name: 'Mötzi', wins: 2, rank: 1 },
+      { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
+      { playerId: '3', name: 'Husi', wins: 2, rank: 3 },
+    ]},
+  ],
+  allPlayers: [
+    { playerId: '1', name: 'Mötzi', wins: 2, rank: 1 },
+    { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
+    { playerId: '3', name: 'Husi', wins: 2, rank: 3 },
+    { playerId: '4', name: 'Rötschi', wins: 0, rank: 4 },
+  ],
+};
 
-  const segmentAngle = 360 / players.length;
-  const wheelSize = 200;
-  const center = wheelSize / 2;
-  const radius = wheelSize / 2 - 10;
+const SCENARIO_4_PLAYERS: { tieGroups: TieGroup[]; allPlayers: Player[] } = {
+  tieGroups: [
+    { wins: 2, startRank: 1, players: [
+      { playerId: '1', name: 'Mötzi', wins: 2, rank: 1 },
+      { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
+      { playerId: '3', name: 'Husi', wins: 2, rank: 3 },
+      { playerId: '4', name: 'Rötschi', wins: 2, rank: 4 },
+    ]},
+  ],
+  allPlayers: [
+    { playerId: '1', name: 'Mötzi', wins: 2, rank: 1 },
+    { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
+    { playerId: '3', name: 'Husi', wins: 2, rank: 3 },
+    { playerId: '4', name: 'Rötschi', wins: 2, rank: 4 },
+  ],
+};
 
-  const spin = () => {
-    if (isSpinning) return;
-    setIsSpinning(true);
-    const newRotation = rotation + 1440 + Math.random() * 360;
-    setRotation(newRotation);
-    setTimeout(() => setIsSpinning(false), 3500);
-  };
+const SCENARIO_2_GROUPS: { tieGroups: TieGroup[]; allPlayers: Player[] } = {
+  tieGroups: [
+    { wins: 3, startRank: 1, players: [
+      { playerId: '1', name: 'Mötzi', wins: 3, rank: 1 },
+      { playerId: '2', name: 'Poli', wins: 3, rank: 2 },
+    ]},
+    { wins: 1, startRank: 3, players: [
+      { playerId: '3', name: 'Husi', wins: 1, rank: 3 },
+      { playerId: '4', name: 'Rötschi', wins: 1, rank: 4 },
+    ]},
+  ],
+  allPlayers: [
+    { playerId: '1', name: 'Mötzi', wins: 3, rank: 1 },
+    { playerId: '2', name: 'Poli', wins: 3, rank: 2 },
+    { playerId: '3', name: 'Husi', wins: 1, rank: 3 },
+    { playerId: '4', name: 'Rötschi', wins: 1, rank: 4 },
+  ],
+};
 
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg text-center">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center gap-4">
-        {/* Wheel container */}
-        <div className="relative">
-          {/* Pointer */}
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
-            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-primary drop-shadow-lg" />
-          </div>
-
-          {/* SVG Wheel */}
-          <svg
-            width={wheelSize}
-            height={wheelSize}
-            className="drop-shadow-xl"
-            style={{
-              transform: `rotate(${rotation}deg)`,
-              transition: isSpinning ? 'transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
-            }}
-          >
-            {/* Outer ring */}
-            <circle
-              cx={center}
-              cy={center}
-              r={radius + 5}
-              fill="none"
-              stroke="hsl(var(--primary))"
-              strokeWidth="4"
-            />
-            
-            {/* Segments */}
-            {players.map((player, index) => {
-              const startAngle = index * segmentAngle;
-              const endAngle = (index + 1) * segmentAngle;
-              const path = createArcPath(center, center, radius, startAngle, endAngle);
-              const textPos = getTextPosition(center, center, radius, startAngle, endAngle);
-              const color = WHEEL_COLORS[index % WHEEL_COLORS.length];
-              
-              return (
-                <g key={player.playerId}>
-                  {/* Segment */}
-                  <path
-                    d={path}
-                    fill={color}
-                    stroke="white"
-                    strokeWidth="2"
-                  />
-                  {/* Player name */}
-                  <text
-                    x={textPos.x}
-                    y={textPos.y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="text-xs font-bold"
-                    fill="white"
-                    style={{
-                      transform: `rotate(${textPos.rotation}deg)`,
-                      transformOrigin: `${textPos.x}px ${textPos.y}px`,
-                    }}
-                  >
-                    {player.name}
-                  </text>
-                </g>
-              );
-            })}
-            
-            {/* Center circle */}
-            <circle
-              cx={center}
-              cy={center}
-              r={20}
-              fill="white"
-              stroke="hsl(var(--primary))"
-              strokeWidth="3"
-            />
-            <circle
-              cx={center}
-              cy={center}
-              r={14}
-              fill="hsl(var(--primary))"
-            />
-          </svg>
-        </div>
-
-        {/* Spin button */}
-        <Button
-          onClick={spin}
-          disabled={isSpinning}
-          className={cn("gap-2", isSpinning && "animate-pulse")}
-        >
-          <Sparkles className={cn("h-4 w-4", isSpinning && "animate-spin")} />
-          {isSpinning ? 'Dreht...' : 'Drehen!'}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
+type ScenarioKey = '2players' | '3players' | '4players' | '2groups';
 
 export default function WheelDemo() {
-  const twoPlayers: Player[] = [
-    { playerId: '1', name: 'Mötzi', wins: 2 },
-    { playerId: '2', name: 'Poli', wins: 2 },
-  ];
-  
-  const threePlayers: Player[] = [
-    { playerId: '1', name: 'Mötzi', wins: 2 },
-    { playerId: '2', name: 'Poli', wins: 2 },
-    { playerId: '3', name: 'Husi', wins: 2 },
-  ];
-  
-  const fourPlayers: Player[] = [
-    { playerId: '1', name: 'Mötzi', wins: 2 },
-    { playerId: '2', name: 'Poli', wins: 2 },
-    { playerId: '3', name: 'Husi', wins: 2 },
-    { playerId: '4', name: 'Rötschi', wins: 2 },
-  ];
+  const navigate = useNavigate();
+  const [activeScenario, setActiveScenario] = useState<ScenarioKey>('2players');
+  const [results, setResults] = useState<Player[] | null>(null);
+  const [key, setKey] = useState(0); // For resetting wheel
+
+  const scenarios: Record<ScenarioKey, { label: string; description: string; data: typeof SCENARIO_2_PLAYERS }> = {
+    '2players': { 
+      label: '2 Spieler', 
+      description: 'Mötzi & Poli haben 2 Siege',
+      data: SCENARIO_2_PLAYERS 
+    },
+    '3players': { 
+      label: '3 Spieler', 
+      description: 'Mötzi, Poli & Husi haben 2 Siege',
+      data: SCENARIO_3_PLAYERS 
+    },
+    '4players': { 
+      label: '4 Spieler', 
+      description: 'Alle haben 2 Siege',
+      data: SCENARIO_4_PLAYERS 
+    },
+    '2groups': { 
+      label: '2 Gruppen', 
+      description: 'Mötzi & Poli (3 Siege) + Husi & Rötschi (1 Sieg)',
+      data: SCENARIO_2_GROUPS 
+    },
+  };
+
+  const currentScenario = scenarios[activeScenario];
+
+  const handleComplete = (finalRankings: Player[]) => {
+    setResults(finalRankings);
+  };
+
+  const resetScenario = () => {
+    setResults(null);
+    setKey(k => k + 1);
+  };
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">Glücksrad Demo</h1>
-        <p className="text-muted-foreground">Darstellung für 2, 3 und 4 Spieler</p>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-foreground">Glücksrad Demo</h1>
+          <p className="text-muted-foreground">Teste verschiedene Gleichstand-Szenarien</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <DemoWheel players={twoPlayers} title="2 Spieler" />
-        <DemoWheel players={threePlayers} title="3 Spieler" />
-        <DemoWheel players={fourPlayers} title="4 Spieler" />
-      </div>
+      {/* Scenario Selection */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Szenario wählen</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(Object.entries(scenarios) as [ScenarioKey, typeof scenarios[ScenarioKey]][]).map(([key, scenario]) => (
+            <Button
+              key={key}
+              variant={activeScenario === key ? 'default' : 'outline'}
+              className="h-auto flex-col py-3"
+              onClick={() => {
+                setActiveScenario(key);
+                setResults(null);
+                setKey(k => k + 1);
+              }}
+            >
+              <span className="font-semibold">{scenario.label}</span>
+              <span className="text-xs opacity-75 whitespace-normal">{scenario.description}</span>
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Wheel or Results */}
+      <Card className="border-2 border-primary/30">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              {currentScenario.label}
+            </CardTitle>
+            {results && (
+              <Button variant="outline" size="sm" onClick={resetScenario} className="gap-1">
+                <RotateCcw className="h-4 w-4" />
+                Nochmal
+              </Button>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">{currentScenario.description}</p>
+        </CardHeader>
+        <CardContent>
+          {results ? (
+            <div className="space-y-4 py-4">
+              <div className="text-center text-lg font-semibold text-primary">
+                🎉 Fertig! Finale Rangliste:
+              </div>
+              <div className="space-y-2">
+                {results.map((player) => (
+                  <div
+                    key={player.playerId}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border p-3",
+                      player.rank === 1 && "bg-yellow-50 border-yellow-300",
+                      player.rank === 2 && "bg-gray-50 border-gray-300",
+                      player.rank === 3 && "bg-orange-50 border-orange-300"
+                    )}
+                  >
+                    <div className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full font-bold",
+                      player.rank === 1 && "bg-yellow-200 text-yellow-800",
+                      player.rank === 2 && "bg-gray-200 text-gray-700",
+                      player.rank === 3 && "bg-orange-200 text-orange-800",
+                      player.rank === 4 && "bg-muted text-muted-foreground"
+                    )}>
+                      {player.rank}
+                    </div>
+                    <span className="font-medium">{player.name}</span>
+                    <span className="text-sm text-muted-foreground ml-auto">
+                      {player.wins} {player.wins === 1 ? 'Sieg' : 'Siege'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <LuckyWheel
+              key={key}
+              tieGroups={currentScenario.data.tieGroups}
+              allPlayers={currentScenario.data.allPlayers}
+              onComplete={handleComplete}
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
