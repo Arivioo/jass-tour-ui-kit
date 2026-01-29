@@ -3,9 +3,19 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, Shuffle, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
-import { PLAYERS, formatCHF } from '@/lib/players';
+import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, Shuffle, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle } from 'lucide-react';
+import { PLAYERS, FINE_TYPES, formatCHF } from '@/lib/players';
 import { cn } from '@/lib/utils';
+
+interface Fine {
+  id: string;
+  playerId: string;
+  type: string;
+  amount: number;
+  note?: string;
+  matchNumber?: number;
+  location?: string;
+}
 
 interface LocationState {
   matchResults?: Array<{
@@ -14,7 +24,9 @@ interface LocationState {
     teamATotal: number;
     teamBTotal: number;
     winner: 'A' | 'B' | 'tie';
-    fines: Array<{ playerId: string; amount: number }>;
+    fines: Fine[];
+    location?: string;
+    matchNumber?: number;
   }>;
   playerWins?: { [playerId: string]: number };
 }
@@ -34,11 +46,18 @@ const PLACEHOLDER_SUMMARY = {
     { playerId: '3', name: 'Husi', wins: 2, rank: 3 },
     { playerId: '4', name: 'Rötschi', wins: 1, rank: 4 },
   ],
-  payments: [
-    { playerId: '1', name: 'Mötzi', buyIn: 25, fines: 15, rankFine: 0, total: 40 },
-    { playerId: '2', name: 'Poli', buyIn: 25, fines: 20, rankFine: 10, total: 55 },
-    { playerId: '3', name: 'Husi', buyIn: 25, fines: 10, rankFine: 15, total: 50 },
-    { playerId: '4', name: 'Rötschi', buyIn: 25, fines: 25, rankFine: 20, total: 70 },
+  matchResults: [
+    { matchNumber: 1, location: 'Rechte Winkel', fines: [
+      { id: '1', playerId: '1', type: 'eichle', amount: 5, note: 'Runde 3', matchNumber: 1, location: 'Rechte Winkel' },
+      { id: '2', playerId: '2', type: 'match', amount: 10, note: 'Runde 5', matchNumber: 1, location: 'Rechte Winkel' },
+    ]},
+    { matchNumber: 2, location: 'Hürtel', fines: [
+      { id: '3', playerId: '3', type: 'weniger', amount: 5, note: 'Runde 2', matchNumber: 2, location: 'Hürtel' },
+    ]},
+    { matchNumber: 3, location: 'Engel', fines: [
+      { id: '4', playerId: '4', type: 'gliichi4', amount: 5, note: 'Runde 1', matchNumber: 3, location: 'Engel' },
+      { id: '5', playerId: '1', type: 'charte', amount: 5, note: 'Runde 4', matchNumber: 3, location: 'Engel' },
+    ]},
   ],
 };
 
@@ -86,29 +105,38 @@ export default function Summary() {
     }
   }, [state?.playerWins]);
 
-  // Calculate fines from match results
-  const playerFines = state?.matchResults
-    ? PLAYERS.reduce((acc, player) => {
-        const totalFines = state.matchResults?.reduce((sum, match) => {
-          return sum + match.fines
-            .filter(f => f.playerId === player.id)
-            .reduce((s, f) => s + f.amount, 0);
-        }, 0) || 0;
-        acc[player.id] = totalFines;
-        return acc;
-      }, {} as { [key: string]: number })
-    : null;
+  // Collect all fines from match results with location info
+  const allFines: Fine[] = state?.matchResults
+    ? state.matchResults.flatMap(match => match.fines.map(f => ({
+        ...f,
+        matchNumber: match.matchNumber || 0,
+        location: match.location || 'Unbekannt',
+      })))
+    : PLACEHOLDER_SUMMARY.matchResults.flatMap(m => m.fines);
+
+  // Group fines by player
+  const finesByPlayer = PLAYERS.reduce((acc, player) => {
+    acc[player.id] = allFines.filter(f => f.playerId === player.id);
+    return acc;
+  }, {} as { [key: string]: Fine[] });
+
+  // Calculate total fines per player
+  const playerFines = PLAYERS.reduce((acc, player) => {
+    acc[player.id] = finesByPlayer[player.id]?.reduce((sum, f) => sum + f.amount, 0) || 0;
+    return acc;
+  }, {} as { [key: string]: number });
 
   // Calculate payments with rank fines based on wins
   const payments = rankings.map(player => {
-    const finesAmount = playerFines?.[player.playerId] || 
-      PLACEHOLDER_SUMMARY.payments.find(p => p.playerId === player.playerId)?.fines || 0;
+    const finesAmount = playerFines[player.playerId] || 0;
     const rankFine = RANK_FINES[player.rank] || 0;
+    const playerFinesList = finesByPlayer[player.playerId] || [];
     return {
       playerId: player.playerId,
       name: player.name,
       buyIn: 25,
       fines: finesAmount,
+      finesList: playerFinesList,
       rankFine,
       total: 25 + finesAmount + rankFine,
     };
@@ -294,8 +322,11 @@ export default function Summary() {
             <CreditCard className="h-5 w-5 text-primary" />
             Zahlungsübersicht
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Detaillierte Auflistung aller Zahlungen mit Bussen
+          </p>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {payments.map((player) => (
             <div
               key={player.playerId}
@@ -305,7 +336,9 @@ export default function Summary() {
                 <span className="text-lg font-semibold">{player.name}</span>
                 <span className="text-lg font-bold text-primary">{formatCHF(player.total)}</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              
+              {/* Summary Row */}
+              <div className="grid grid-cols-3 gap-2 text-sm mb-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Buy-In:</span>
                   <span>{formatCHF(player.buyIn)}</span>
@@ -318,11 +351,46 @@ export default function Summary() {
                   <span className="text-muted-foreground">Rang-Busse:</span>
                   <span>{formatCHF(player.rankFine)}</span>
                 </div>
-                <div className="flex justify-between font-medium">
-                  <span className="text-muted-foreground">Total:</span>
-                  <span className="text-primary">{formatCHF(player.total)}</span>
-                </div>
               </div>
+
+              {/* Detailed Fines List */}
+              {player.finesList.length > 0 && (
+                <div className="border-t pt-3 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <AlertCircle className="h-3 w-3" />
+                    Bussen Details
+                  </div>
+                  <div className="space-y-1">
+                    {player.finesList.map((fine, idx) => {
+                      const fineType = FINE_TYPES.find(f => f.id === fine.type);
+                      return (
+                        <div
+                          key={fine.id || idx}
+                          className="flex items-center justify-between text-sm rounded bg-card p-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              {fine.location}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              Match {fine.matchNumber}
+                            </span>
+                            <span className="text-muted-foreground">•</span>
+                            <span>{fineType?.label || fine.type}</span>
+                            {fine.note && (
+                              <span className="text-xs text-muted-foreground">
+                                ({fine.note})
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-medium">{formatCHF(fine.amount)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 

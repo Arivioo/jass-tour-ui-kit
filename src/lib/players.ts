@@ -12,6 +12,15 @@ export const PLAYERS: Player[] = [
   { id: '4', name: 'Rötschi' },
 ];
 
+export const LOCATIONS = [
+  { id: 'rechte-winkel', name: 'Rechte Winkel' },
+  { id: 'huertel', name: 'Hürtel' },
+  { id: 'engel', name: 'Engel' },
+  { id: 'roessli', name: 'Rössli' },
+  { id: 'poep', name: 'Pöp' },
+  { id: 'custom', name: 'Manuell' },
+] as const;
+
 export const FINE_TYPES = [
   { id: 'eichle', label: 'Eichle Banner', amount: 5 },
   { id: 'match', label: 'Match', amount: 10 },
