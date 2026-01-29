@@ -3,10 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle } from 'lucide-react';
+import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle, Calendar } from 'lucide-react';
 import { PLAYERS, FINE_TYPES, formatCHF } from '@/lib/players';
 import { cn } from '@/lib/utils';
 import { LuckyWheel } from '@/components/LuckyWheel';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 interface Fine {
   id: string;
   playerId: string;
@@ -196,7 +198,13 @@ export default function Summary() {
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">Zusammenfassung</h1>
-        <p className="text-muted-foreground">Übersicht des Jass-Abends</p>
+        <div className="flex items-center gap-4 text-muted-foreground">
+          <span>Übersicht des Jass-Abends</span>
+          <span className="flex items-center gap-1.5">
+            <Calendar className="h-4 w-4" />
+            {format(new Date(), "EEEE, d. MMMM yyyy", { locale: de })}
+          </span>
+        </div>
       </div>
 
       {/* Lucky Wheel Tiebreaker */}
