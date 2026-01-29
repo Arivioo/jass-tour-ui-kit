@@ -6,10 +6,10 @@ export interface Player {
 }
 
 export const PLAYERS: Player[] = [
-  { id: '1', name: 'Hans' },
-  { id: '2', name: 'Peter' },
-  { id: '3', name: 'Urs' },
-  { id: '4', name: 'Beat' },
+  { id: '1', name: 'Mötzi' },
+  { id: '2', name: 'Poli' },
+  { id: '3', name: 'Husi' },
+  { id: '4', name: 'Rötschi' },
 ];
 
 export const FINE_TYPES = [
