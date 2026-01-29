@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Trophy, ChevronRight, Inbox, MapPin, Users, Medal, Filter, RotateCcw } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar, Trophy, ChevronRight, Inbox, MapPin, Users, Medal } from 'lucide-react';
 import { formatCHF } from '@/lib/players';
 
 interface SessionData {
@@ -164,45 +162,9 @@ const TEST_SESSIONS: SessionData[] = [
   },
 ];
 
-type FilterType = 'all' | 'location' | 'winner';
-
 export default function History() {
   const navigate = useNavigate();
-  const [sessions, setSessions] = useState<SessionData[]>(TEST_SESSIONS);
-  const [showEmpty, setShowEmpty] = useState(false);
-  const [filterType, setFilterType] = useState<FilterType>('all');
-  const [filterValue, setFilterValue] = useState<string>('');
-
-  // Get unique locations and winners for filters
-  const locations = [...new Set(TEST_SESSIONS.map(s => s.location))];
-  const winners = [...new Set(TEST_SESSIONS.map(s => s.players[0].name))];
-
-  // Apply filters
-  const filteredSessions = sessions.filter(session => {
-    if (filterType === 'location' && filterValue) {
-      return session.location === filterValue;
-    }
-    if (filterType === 'winner' && filterValue) {
-      return session.players[0].name === filterValue;
-    }
-    return true;
-  });
-
-  // Toggle between empty state and data
-  const toggleEmpty = () => {
-    if (showEmpty) {
-      setSessions(TEST_SESSIONS);
-    } else {
-      setSessions([]);
-    }
-    setShowEmpty(!showEmpty);
-  };
-
-  // Reset filters
-  const resetFilters = () => {
-    setFilterType('all');
-    setFilterValue('');
-  };
+  const sessions = TEST_SESSIONS;
 
   return (
     <div className="space-y-6">
@@ -212,124 +174,38 @@ export default function History() {
         <p className="text-muted-foreground">Alle bisherigen Jass-Sessions</p>
       </div>
 
-      {/* Test Controls */}
-      <Card className="border-dashed border-primary/50 bg-primary/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-primary">🧪 Test-Kontrollen</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant={showEmpty ? 'default' : 'outline'} 
-              size="sm"
-              onClick={toggleEmpty}
-            >
-              {showEmpty ? 'Daten anzeigen' : 'Leerer Zustand'}
-            </Button>
-          </div>
-          
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={filterType} onValueChange={(v: FilterType) => {
-              setFilterType(v);
-              setFilterValue('');
-            }}>
-              <SelectTrigger className="w-[140px] h-8">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle anzeigen</SelectItem>
-                <SelectItem value="location">Nach Ort</SelectItem>
-                <SelectItem value="winner">Nach Sieger</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {filterType === 'location' && (
-              <Select value={filterValue} onValueChange={setFilterValue}>
-                <SelectTrigger className="w-[160px] h-8">
-                  <SelectValue placeholder="Ort wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map(loc => (
-                    <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {filterType === 'winner' && (
-              <Select value={filterValue} onValueChange={setFilterValue}>
-                <SelectTrigger className="w-[140px] h-8">
-                  <SelectValue placeholder="Sieger wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {winners.map(w => (
-                    <SelectItem key={w} value={w}>{w}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {(filterType !== 'all' || filterValue) && (
-              <Button variant="ghost" size="sm" onClick={resetFilters} className="h-8 gap-1">
-                <RotateCcw className="h-3 w-3" />
-                Zurücksetzen
-              </Button>
-            )}
-          </div>
-
-          {/* Test case legend */}
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p className="font-medium">Enthaltene Testfälle:</p>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 list-disc list-inside">
-              <li>Klarer Sieger (alle verschiedene Siege)</li>
-              <li>2 Spieler Gleichstand für 1.</li>
-              <li>3 Spieler Gleichstand</li>
-              <li>Alle 4 Spieler Gleichstand</li>
-              <li>2 getrennte Tie-Gruppen (2+2)</li>
-              <li>Hohe Bussen (viele Strafen)</li>
-              <li>Niedrige Bussen (sauberes Spiel)</li>
-              <li>Viele Matches (5 Runden)</li>
-              <li>Manuelle Location-Eingabe</li>
-              <li>Ältere Session (anderes Jahr)</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Stats Summary */}
-      {!showEmpty && filteredSessions.length > 0 && (
+      {sessions.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard 
             label="Sessions" 
-            value={filteredSessions.length.toString()} 
+            value={sessions.length.toString()} 
             icon={Calendar}
           />
           <StatCard 
             label="Total Pot" 
-            value={formatCHF(filteredSessions.reduce((sum, s) => sum + s.totalPot, 0))} 
+            value={formatCHF(sessions.reduce((sum, s) => sum + s.totalPot, 0))} 
             icon={Trophy}
           />
           <StatCard 
             label="Matches" 
-            value={filteredSessions.reduce((sum, s) => sum + s.matchCount, 0).toString()} 
+            value={sessions.reduce((sum, s) => sum + s.matchCount, 0).toString()} 
             icon={Medal}
           />
           <StatCard 
             label="Locations" 
-            value={new Set(filteredSessions.map(s => s.location)).size.toString()} 
+            value={new Set(sessions.map(s => s.location)).size.toString()} 
             icon={MapPin}
           />
         </div>
       )}
 
       {/* Session List */}
-      {filteredSessions.length === 0 ? (
+      {sessions.length === 0 ? (
         <EmptyState />
       ) : (
         <div className="space-y-3">
-          {filteredSessions.map((session) => (
+          {sessions.map((session) => (
             <SessionCard
               key={session.id}
               session={session}
