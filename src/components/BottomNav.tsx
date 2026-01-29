@@ -3,7 +3,7 @@ import { Home, Play, History, Trophy, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Start' },
+  { to: '/', icon: Home, label: 'Dashboard' },
   { to: '/session', icon: Play, label: 'Session' },
   { to: '/history', icon: History, label: 'Abende' },
   { to: '/rangliste', icon: Trophy, label: 'Rangliste' },
