@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal } from 'lucide-react';
+import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, Shuffle, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { PLAYERS, formatCHF } from '@/lib/players';
+import { cn } from '@/lib/utils';
 
 interface LocationState {
   matchResults?: Array<{
@@ -18,13 +19,20 @@ interface LocationState {
   playerWins?: { [playerId: string]: number };
 }
 
+interface RankingPlayer {
+  playerId: string;
+  name: string;
+  wins: number;
+  rank: number;
+}
+
 // Placeholder summary data for when no state is passed
 const PLACEHOLDER_SUMMARY = {
   rankings: [
     { playerId: '1', name: 'Mötzi', wins: 3, rank: 1 },
     { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
-    { playerId: '3', name: 'Husi', wins: 1, rank: 3 },
-    { playerId: '4', name: 'Rötschi', wins: 0, rank: 4 },
+    { playerId: '3', name: 'Husi', wins: 2, rank: 3 },
+    { playerId: '4', name: 'Rötschi', wins: 1, rank: 4 },
   ],
   payments: [
     { playerId: '1', name: 'Mötzi', buyIn: 25, fines: 15, rankFine: 0, total: 40 },
@@ -41,19 +49,42 @@ export default function Summary() {
   const location = useLocation();
   const state = location.state as LocationState | undefined;
   const [leftFirst, setLeftFirst] = useState('');
+  const [rankings, setRankings] = useState<RankingPlayer[]>([]);
+  const [isRandomizing, setIsRandomizing] = useState(false);
+  const [showTiebreaker, setShowTiebreaker] = useState(false);
+  const [tiedPlayers, setTiedPlayers] = useState<string[]>([]);
 
-  // Calculate rankings from match wins (1 point per win)
-  const rankings = state?.playerWins
-    ? PLAYERS
-        .map(player => ({
-          playerId: player.id,
-          name: player.name,
-          wins: state.playerWins?.[player.id] || 0,
-          rank: 0,
-        }))
-        .sort((a, b) => b.wins - a.wins)
-        .map((player, index) => ({ ...player, rank: index + 1 }))
-    : PLACEHOLDER_SUMMARY.rankings;
+  // Initialize rankings from match wins
+  useEffect(() => {
+    const initialRankings = state?.playerWins
+      ? PLAYERS
+          .map(player => ({
+            playerId: player.id,
+            name: player.name,
+            wins: state.playerWins?.[player.id] || 0,
+            rank: 0,
+          }))
+          .sort((a, b) => b.wins - a.wins)
+          .map((player, index) => ({ ...player, rank: index + 1 }))
+      : PLACEHOLDER_SUMMARY.rankings;
+    
+    setRankings(initialRankings);
+    
+    // Check for ties
+    const winCounts = initialRankings.map(r => r.wins);
+    const duplicates = winCounts.filter((wins, idx) => 
+      winCounts.indexOf(wins) !== idx || winCounts.lastIndexOf(wins) !== idx
+    );
+    const uniqueTiedWins = [...new Set(duplicates)];
+    
+    if (uniqueTiedWins.length > 0) {
+      const tied = initialRankings
+        .filter(r => uniqueTiedWins.includes(r.wins))
+        .map(r => r.playerId);
+      setTiedPlayers(tied);
+      setShowTiebreaker(true);
+    }
+  }, [state?.playerWins]);
 
   // Calculate fines from match results
   const playerFines = state?.matchResults
@@ -83,6 +114,79 @@ export default function Summary() {
     };
   });
 
+  // Randomize tied players
+  const handleRandomize = () => {
+    setIsRandomizing(true);
+    
+    // Animate randomization
+    let iterations = 0;
+    const maxIterations = 15;
+    const interval = setInterval(() => {
+      iterations++;
+      
+      setRankings(prev => {
+        const tiedWins = [...new Set(prev.filter(r => tiedPlayers.includes(r.playerId)).map(r => r.wins))];
+        const newRankings = [...prev];
+        
+        tiedWins.forEach(wins => {
+          const tiedIndices = newRankings
+            .map((r, i) => r.wins === wins ? i : -1)
+            .filter(i => i !== -1);
+          
+          // Shuffle tied players
+          for (let i = tiedIndices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const tempRank = newRankings[tiedIndices[i]].rank;
+            newRankings[tiedIndices[i]].rank = newRankings[tiedIndices[j]].rank;
+            newRankings[tiedIndices[j]].rank = tempRank;
+            
+            // Swap positions in array
+            [newRankings[tiedIndices[i]], newRankings[tiedIndices[j]]] = 
+              [newRankings[tiedIndices[j]], newRankings[tiedIndices[i]]];
+          }
+        });
+        
+        return newRankings.sort((a, b) => a.rank - b.rank);
+      });
+      
+      if (iterations >= maxIterations) {
+        clearInterval(interval);
+        setIsRandomizing(false);
+        setShowTiebreaker(false);
+      }
+    }, 100);
+  };
+
+  // Move player up in ranking
+  const moveUp = (index: number) => {
+    if (index === 0) return;
+    setRankings(prev => {
+      const newRankings = [...prev];
+      // Swap ranks
+      const tempRank = newRankings[index].rank;
+      newRankings[index].rank = newRankings[index - 1].rank;
+      newRankings[index - 1].rank = tempRank;
+      // Swap positions
+      [newRankings[index], newRankings[index - 1]] = [newRankings[index - 1], newRankings[index]];
+      return newRankings;
+    });
+  };
+
+  // Move player down in ranking
+  const moveDown = (index: number) => {
+    if (index === rankings.length - 1) return;
+    setRankings(prev => {
+      const newRankings = [...prev];
+      // Swap ranks
+      const tempRank = newRankings[index].rank;
+      newRankings[index].rank = newRankings[index + 1].rank;
+      newRankings[index + 1].rank = tempRank;
+      // Swap positions
+      [newRankings[index], newRankings[index + 1]] = [newRankings[index + 1], newRankings[index]];
+      return newRankings;
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -90,6 +194,33 @@ export default function Summary() {
         <h1 className="text-2xl font-bold text-foreground">Zusammenfassung</h1>
         <p className="text-muted-foreground">Übersicht des Jass-Abends</p>
       </div>
+
+      {/* Tiebreaker Card */}
+      {showTiebreaker && tiedPlayers.length > 0 && (
+        <Card className="border-2 border-primary/50 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="font-semibold text-primary flex items-center gap-2">
+                  <Shuffle className="h-5 w-5" />
+                  Gleichstand erkannt!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {tiedPlayers.length} Spieler haben die gleiche Anzahl Siege
+                </p>
+              </div>
+              <Button 
+                onClick={handleRandomize}
+                disabled={isRandomizing}
+                className="gap-2"
+              >
+                <Shuffle className={cn("h-4 w-4", isRandomizing && "animate-spin")} />
+                {isRandomizing ? 'Auslosen...' : 'Auslosen'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Rankings - based on match wins */}
       <Card>
@@ -99,15 +230,39 @@ export default function Summary() {
             Schlussrangliste
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            1 Punkt pro gewonnenes Match
+            1 Punkt pro gewonnenes Match – Rangliste kann manuell angepasst werden
           </p>
         </CardHeader>
         <CardContent className="space-y-2">
-          {rankings.map((player) => (
+          {rankings.map((player, index) => (
             <div
               key={player.playerId}
-              className="flex items-center gap-3 rounded-lg border p-3"
+              className={cn(
+                "flex items-center gap-3 rounded-lg border p-3 transition-all",
+                isRandomizing && tiedPlayers.includes(player.playerId) && "animate-pulse bg-primary/10",
+                tiedPlayers.includes(player.playerId) && !isRandomizing && "border-primary/30"
+              )}
             >
+              <div className="flex flex-col gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => moveUp(index)}
+                  disabled={index === 0 || isRandomizing}
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => moveDown(index)}
+                  disabled={index === rankings.length - 1 || isRandomizing}
+                >
+                  <ArrowDown className="h-3 w-3" />
+                </Button>
+              </div>
               <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
                 player.rank === 1 
                   ? 'bg-yellow-100 text-yellow-700' 
@@ -126,6 +281,7 @@ export default function Summary() {
                   {player.wins} {player.wins === 1 ? 'Sieg' : 'Siege'}
                 </div>
               </div>
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
           ))}
         </CardContent>
