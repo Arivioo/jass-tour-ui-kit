@@ -3,12 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle, Calendar } from 'lucide-react';
-import { PLAYERS, FINE_TYPES, formatCHF } from '@/lib/players';
+import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle, Calendar, Loader2 } from 'lucide-react';
+import { FINE_TYPES, formatCHF } from '@/lib/players';
+import { usePlayers } from '@/hooks/usePlayers';
 import { cn } from '@/lib/utils';
 import { LuckyWheel } from '@/components/LuckyWheel';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+
 interface Fine {
   id: string;
   playerId: string;
@@ -87,6 +89,7 @@ export default function Summary() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | undefined;
+  const { data: players = [], isLoading: playersLoading } = usePlayers();
   const [leftFirst, setLeftFirst] = useState('');
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
   const [showTiebreaker, setShowTiebreaker] = useState(false);
@@ -144,9 +147,9 @@ export default function Summary() {
         setShowTiebreaker(true);
       }
       
-    } else if (state?.playerWins) {
+    } else if (state?.playerWins && players.length > 0) {
       // Data from Session wizard
-      initialRankings = PLAYERS
+      initialRankings = players
         .map(player => ({
           playerId: player.id,
           name: player.name,
@@ -188,7 +191,7 @@ export default function Summary() {
     }
     
     setRankings(initialRankings);
-  }, [state]);
+  }, [state, players]);
 
   // Collect all fines from match results with location info
   const allFines: Fine[] = state?.matchResults
@@ -200,13 +203,13 @@ export default function Summary() {
     : PLACEHOLDER_SUMMARY.matchResults.flatMap(m => m.fines);
 
   // Group fines by player
-  const finesByPlayer = PLAYERS.reduce((acc, player) => {
+  const finesByPlayer = players.reduce((acc, player) => {
     acc[player.id] = allFines.filter(f => f.playerId === player.id);
     return acc;
   }, {} as { [key: string]: Fine[] });
 
   // Calculate total fines per player
-  const playerFines = PLAYERS.reduce((acc, player) => {
+  const playerFines = players.reduce((acc, player) => {
     acc[player.id] = finesByPlayer[player.id]?.reduce((sum, f) => sum + f.amount, 0) || 0;
     return acc;
   }, {} as { [key: string]: number });
@@ -481,7 +484,7 @@ export default function Summary() {
                 <SelectValue placeholder="Spieler wählen" />
               </SelectTrigger>
               <SelectContent>
-                {PLAYERS.map((p) => (
+                {players.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -490,7 +493,7 @@ export default function Summary() {
           {leftFirst && (
             <div className="rounded-lg bg-primary/10 p-3 text-sm">
               <span className="font-medium text-primary">
-                {PLAYERS.find(p => p.id === leftFirst)?.name}
+                {players.find(p => p.id === leftFirst)?.name}
               </span>{' '}
               muss nächstes Mal Lösli kaufen.
             </div>

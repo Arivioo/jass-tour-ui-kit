@@ -2,20 +2,42 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Play, History, FileText, Trophy, Edit } from 'lucide-react';
+import { Calendar, Clock, Play, History, FileText, Trophy, Edit, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useAppSettings, useUpdateNextDate } from '@/hooks/useAppSettings';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('20:00');
   
-  // Placeholder date - next Friday at 20:00
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + ((5 - nextDate.getDay() + 7) % 7 || 7));
-  nextDate.setHours(20, 0, 0, 0);
+  const { data: settings, isLoading } = useAppSettings();
+  const updateNextDate = useUpdateNextDate();
 
-  const countdown = getCountdown(nextDate);
+  const nextDate = settings?.next_date ? new Date(settings.next_date) : null;
+  const countdown = nextDate ? getCountdown(nextDate) : { days: 0, hours: 0, minutes: 0 };
+
+  const handleSaveDate = () => {
+    if (!newDate) return;
+    
+    const [hours, minutes] = newTime.split(':').map(Number);
+    const dateTime = new Date(newDate);
+    dateTime.setHours(hours, minutes, 0, 0);
+    
+    updateNextDate.mutate(dateTime, {
+      onSuccess: () => {
+        toast({ title: 'Termin gespeichert!' });
+        setEditOpen(false);
+      },
+      onError: () => {
+        toast({ variant: 'destructive', title: 'Fehler beim Speichern' });
+      },
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -47,13 +69,26 @@ export default function Dashboard() {
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Datum</label>
-                    <Input type="date" defaultValue={nextDate.toISOString().split('T')[0]} />
+                    <Input 
+                      type="date" 
+                      value={newDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Zeit</label>
-                    <Input type="time" defaultValue="20:00" />
+                    <Input 
+                      type="time" 
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                    />
                   </div>
-                  <Button className="w-full" onClick={() => setEditOpen(false)}>
+                  <Button 
+                    className="w-full" 
+                    onClick={handleSaveDate}
+                    disabled={!newDate || updateNextDate.isPending}
+                  >
+                    {updateNextDate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Speichern
                   </Button>
                 </div>
@@ -62,22 +97,34 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent className="pt-4">
-          <div className="mb-4 flex items-center gap-2 text-lg font-medium">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            {nextDate.toLocaleDateString('de-CH', { 
-              weekday: 'long', 
-              day: 'numeric', 
-              month: 'long',
-              year: 'numeric'
-            })} um 20:00
-          </div>
-          
-          {/* Countdown */}
-          <div className="grid grid-cols-3 gap-3">
-            <CountdownUnit value={countdown.days} label="Tage" />
-            <CountdownUnit value={countdown.hours} label="Stunden" />
-            <CountdownUnit value={countdown.minutes} label="Minuten" />
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : nextDate ? (
+            <>
+              <div className="mb-4 flex items-center gap-2 text-lg font-medium">
+                <Clock className="h-5 w-5 text-muted-foreground" />
+                {nextDate.toLocaleDateString('de-CH', { 
+                  weekday: 'long', 
+                  day: 'numeric', 
+                  month: 'long',
+                  year: 'numeric'
+                })} um {nextDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              
+              {/* Countdown */}
+              <div className="grid grid-cols-3 gap-3">
+                <CountdownUnit value={countdown.days} label="Tage" />
+                <CountdownUnit value={countdown.hours} label="Stunden" />
+                <CountdownUnit value={countdown.minutes} label="Minuten" />
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              Noch kein Termin festgelegt
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -117,15 +164,6 @@ export default function Dashboard() {
           onClick={() => navigate('/rangliste')}
         />
       </div>
-
-      {/* Wheel Demo Link - temporary */}
-      <Button 
-        variant="outline" 
-        className="w-full gap-2"
-        onClick={() => navigate('/wheel-demo')}
-      >
-        🎡 Glücksrad Demo ansehen
-      </Button>
     </div>
   );
 }

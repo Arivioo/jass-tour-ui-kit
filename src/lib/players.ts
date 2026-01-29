@@ -1,16 +1,5 @@
-// Placeholder player data for 4 fixed players
-export interface Player {
-  id: string;
-  name: string;
-  avatar?: string;
-}
-
-export const PLAYERS: Player[] = [
-  { id: '1', name: 'Mötzi' },
-  { id: '2', name: 'Poli' },
-  { id: '3', name: 'Husi' },
-  { id: '4', name: 'Rötschi' },
-];
+// Re-export Player type from hooks for backwards compatibility
+export type { Player } from '@/hooks/usePlayers';
 
 export const LOCATIONS = [
   { id: 'rechte-winkel', name: 'Rechte Winkel' },
