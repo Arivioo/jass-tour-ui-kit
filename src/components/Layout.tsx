@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar';
 
 export function Layout() {
   const location = useLocation();
-  const isPasswordGate = location.pathname === '/';
+ const isPasswordGate = location.pathname === '/auth';
 
   if (isPasswordGate) {
     return <Outlet />;
