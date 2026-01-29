@@ -72,7 +72,11 @@ export default function Summary() {
   const [leftFirst, setLeftFirst] = useState('');
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
   const [showTiebreaker, setShowTiebreaker] = useState(false);
-  const [tiedPlayers, setTiedPlayers] = useState<string[]>([]);
+  const [tieGroups, setTieGroups] = useState<Array<{
+    wins: number;
+    startRank: number;
+    players: RankingPlayer[];
+  }>>([]);
 
   // Initialize rankings from match wins
   useEffect(() => {
@@ -90,18 +94,32 @@ export default function Summary() {
     
     setRankings(initialRankings);
     
-    // Check for ties
-    const winCounts = initialRankings.map(r => r.wins);
-    const duplicates = winCounts.filter((wins, idx) => 
-      winCounts.indexOf(wins) !== idx || winCounts.lastIndexOf(wins) !== idx
-    );
-    const uniqueTiedWins = [...new Set(duplicates)];
+    // Find tie groups - groups of players with same wins
+    const winGroups: { [wins: number]: RankingPlayer[] } = {};
+    initialRankings.forEach(player => {
+      if (!winGroups[player.wins]) {
+        winGroups[player.wins] = [];
+      }
+      winGroups[player.wins].push(player);
+    });
     
-    if (uniqueTiedWins.length > 0) {
-      const tied = initialRankings
-        .filter(r => uniqueTiedWins.includes(r.wins))
-        .map(r => r.playerId);
-      setTiedPlayers(tied);
+    // Create tie groups (only for groups with more than 1 player)
+    const groups: Array<{ wins: number; startRank: number; players: RankingPlayer[] }> = [];
+    
+    Object.entries(winGroups)
+      .filter(([_, players]) => players.length > 1)
+      .sort(([a], [b]) => Number(b) - Number(a)) // Sort by wins descending
+      .forEach(([wins, players]) => {
+        const startRank = Math.min(...players.map(p => p.rank));
+        groups.push({
+          wins: Number(wins),
+          startRank,
+          players: players.sort((a, b) => a.rank - b.rank),
+        });
+      });
+    
+    if (groups.length > 0) {
+      setTieGroups(groups);
       setShowTiebreaker(true);
     }
   }, [state?.playerWins]);
@@ -144,23 +162,10 @@ export default function Summary() {
   });
 
   // Handle wheel completion
-  const handleWheelComplete = (orderedPlayers: RankingPlayer[]) => {
-    setRankings(prev => {
-      const newRankings = [...prev];
-      const startRank = prev.find(r => r.playerId === orderedPlayers[0].playerId)?.rank || 1;
-      
-      orderedPlayers.forEach((player, idx) => {
-        const rankingIdx = newRankings.findIndex(r => r.playerId === player.playerId);
-        if (rankingIdx !== -1) {
-          newRankings[rankingIdx].rank = startRank + idx;
-        }
-      });
-      
-      return newRankings.sort((a, b) => a.rank - b.rank);
-    });
-    
+  const handleWheelComplete = (finalRankings: RankingPlayer[]) => {
+    setRankings(finalRankings);
     setShowTiebreaker(false);
-    setTiedPlayers([]);
+    setTieGroups([]);
   };
 
   // Move player up in ranking
@@ -208,7 +213,7 @@ export default function Summary() {
       </div>
 
       {/* Lucky Wheel Tiebreaker */}
-      {showTiebreaker && tiedPlayers.length > 0 && (
+      {showTiebreaker && tieGroups.length > 0 && (
         <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -216,13 +221,14 @@ export default function Summary() {
               Gleichstand! Glücksrad entscheidet
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {tiedPlayers.length} Spieler haben die gleiche Anzahl Siege – das Glücksrad entscheidet die Reihenfolge!
+              {tieGroups.reduce((sum, g) => sum + g.players.length, 0)} Spieler in {tieGroups.length} Gleichstand-Gruppe{tieGroups.length > 1 ? 'n' : ''} – das Glücksrad entscheidet die Reihenfolge!
             </p>
           </CardHeader>
           <CardContent>
             <LuckyWheel
-              players={rankings.filter(r => tiedPlayers.includes(r.playerId))}
+              tieGroups={tieGroups}
               onComplete={handleWheelComplete}
+              allPlayers={rankings}
             />
           </CardContent>
         </Card>
@@ -240,12 +246,14 @@ export default function Summary() {
           </p>
         </CardHeader>
         <CardContent className="space-y-2">
-          {rankings.map((player, index) => (
+          {rankings.map((player, index) => {
+            const isInTieGroup = tieGroups.some(g => g.players.some(p => p.playerId === player.playerId));
+            return (
             <div
               key={player.playerId}
               className={cn(
                 "flex items-center gap-3 rounded-lg border p-3 transition-all",
-                tiedPlayers.includes(player.playerId) && "border-primary/30"
+                isInTieGroup && showTiebreaker && "border-primary/30 bg-primary/5"
               )}
             >
               <div className="flex flex-col gap-0.5">
@@ -288,7 +296,8 @@ export default function Summary() {
               </div>
               <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 
