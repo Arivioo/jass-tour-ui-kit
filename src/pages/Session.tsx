@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Users, Trophy, Calculator, AlertCircle, ChevronRight, X, Plus } from 'lucide-react';
+import { Users, Trophy, Calculator, AlertCircle, ChevronRight, X, Plus, Skull, PartyPopper } from 'lucide-react';
 import { PLAYERS, FINE_TYPES, formatCHF, type Player } from '@/lib/players';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +26,8 @@ export default function Session() {
   const [activePlayers, setActivePlayers] = useState<string[]>(PLAYERS.map(p => p.id));
   const [teamA, setTeamA] = useState<string[]>([]);
   const [teamB, setTeamB] = useState<string[]>([]);
-  const [scores, setScores] = useState<number[]>(Array(8).fill(0));
+  const [scoresA, setScoresA] = useState<(number | null)[]>(Array(8).fill(null));
+  const [scoresB, setScoresB] = useState<(number | null)[]>(Array(8).fill(null));
   const [fines, setFines] = useState<Fine[]>([]);
 
   const totalMatches = 5;
@@ -47,15 +48,16 @@ export default function Session() {
       if (currentMatch < totalMatches) {
         setCurrentMatch(currentMatch + 1);
         setStep('teams');
-        setScores(Array(8).fill(0));
+        setScoresA(Array(8).fill(null));
+        setScoresB(Array(8).fill(null));
       } else {
         navigate('/summary');
       }
     }
   };
 
-  const teamATotal = scores.reduce((sum, s) => sum + s, 0);
-  const teamBTotal = scores.reduce((sum, s) => sum + (157 - s), 0);
+  const teamATotal = scoresA.reduce((sum, s) => sum + (s ?? 0), 0);
+  const teamBTotal = scoresB.reduce((sum, s) => sum + (s ?? 0), 0);
 
   return (
     <div className="space-y-4">
@@ -111,11 +113,25 @@ export default function Session() {
 
       {step === 'points' && (
         <PointsStep
-          scores={scores}
-          onScoreChange={(round, value) => {
-            const newScores = [...scores];
+          scoresA={scoresA}
+          scoresB={scoresB}
+          onScoreAChange={(round, value) => {
+            const newScores = [...scoresA];
             newScores[round] = value;
-            setScores(newScores);
+            setScoresA(newScores);
+            // Auto-fill B as complement
+            const newScoresB = [...scoresB];
+            newScoresB[round] = value !== null ? 157 - value : null;
+            setScoresB(newScoresB);
+          }}
+          onScoreBChange={(round, value) => {
+            const newScores = [...scoresB];
+            newScores[round] = value;
+            setScoresB(newScores);
+            // Auto-fill A as complement
+            const newScoresA = [...scoresA];
+            newScoresA[round] = value !== null ? 157 - value : null;
+            setScoresA(newScoresA);
           }}
           teamATotal={teamATotal}
           teamBTotal={teamBTotal}
@@ -286,8 +302,10 @@ function TeamsStep({
 }
 
 function PointsStep({
-  scores,
-  onScoreChange,
+  scoresA,
+  scoresB,
+  onScoreAChange,
+  onScoreBChange,
   teamATotal,
   teamBTotal,
   teamANames,
@@ -298,8 +316,10 @@ function PointsStep({
   onAddFine,
   onRemoveFine,
 }: {
-  scores: number[];
-  onScoreChange: (round: number, value: number) => void;
+  scoresA: (number | null)[];
+  scoresB: (number | null)[];
+  onScoreAChange: (round: number, value: number | null) => void;
+  onScoreBChange: (round: number, value: number | null) => void;
   teamATotal: number;
   teamBTotal: number;
   teamANames: string;
@@ -337,6 +357,15 @@ function PointsStep({
     return fines.filter(f => f.note?.startsWith(`Runde ${round + 1}`));
   };
 
+  // Calculate if round 7 is filled
+  const roundsPlayed = scoresA.filter(s => s !== null).length;
+  const maxPointsRemaining = (8 - roundsPlayed) * 157;
+  const teamANeeds = teamBTotal - teamATotal + 1;
+  const teamBNeeds = teamATotal - teamBTotal + 1;
+  const teamACantWin = roundsPlayed >= 7 && teamANeeds > maxPointsRemaining;
+  const teamBCantWin = roundsPlayed >= 7 && teamBNeeds > maxPointsRemaining;
+  const showWinCondition = roundsPlayed >= 7 && roundsPlayed < 8;
+
   return (
     <div className="space-y-4">
       <Card>
@@ -346,7 +375,7 @@ function PointsStep({
             Punkte & Bussen
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Team B = 157 − Team A | Tippe auf Runde für Bussen
+            Gib Punkte ein – die andere Seite wird automatisch berechnet (157 − Eingabe)
           </p>
         </CardHeader>
         <CardContent>
@@ -360,7 +389,8 @@ function PointsStep({
 
           {/* Rounds */}
           <div className="space-y-2">
-            {scores.map((score, i) => {
+            {scoresA.map((scoreA, i) => {
+              const scoreB = scoresB[i];
               const roundFines = getFinesForRound(i);
               return (
                 <div key={i} className="space-y-2">
@@ -370,14 +400,26 @@ function PointsStep({
                       type="number"
                       min="0"
                       max="157"
-                      value={score || ''}
-                      onChange={(e) => onScoreChange(i, parseInt(e.target.value) || 0)}
+                      value={scoreA ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? null : parseInt(e.target.value);
+                        onScoreAChange(i, val !== null && !isNaN(val) ? Math.min(157, Math.max(0, val)) : null);
+                      }}
                       className="text-center"
                       placeholder="0"
                     />
-                    <div className="rounded-md border bg-muted px-3 py-2 text-center text-muted-foreground">
-                      {157 - score}
-                    </div>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="157"
+                      value={scoreB ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? null : parseInt(e.target.value);
+                        onScoreBChange(i, val !== null && !isNaN(val) ? Math.min(157, Math.max(0, val)) : null);
+                      }}
+                      className="text-center"
+                      placeholder="0"
+                    />
                     <Button
                       variant={expandedRound === i ? "default" : "ghost"}
                       size="icon"
@@ -487,6 +529,87 @@ function PointsStep({
           </div>
         </CardContent>
       </Card>
+
+      {/* Win Condition Card - shows after round 7 */}
+      {showWinCondition && (
+        <Card className={cn(
+          "border-2 transition-all",
+          teamACantWin || teamBCantWin 
+            ? "border-destructive bg-destructive/5" 
+            : "border-primary/30 bg-primary/5"
+        )}>
+          <CardContent className="p-4">
+            {teamACantWin ? (
+              <div className="text-center space-y-2 animate-fade-in">
+                <div className="flex items-center justify-center gap-2">
+                  <Skull className="h-8 w-8 text-destructive animate-bounce" />
+                  <span className="text-2xl">💀</span>
+                </div>
+                <p className="font-bold text-destructive text-lg">
+                  {teamANames} kann nicht mehr gewinnen!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Bräuchten {teamANeeds} Punkte, aber maximal {maxPointsRemaining} möglich
+                </p>
+              </div>
+            ) : teamBCantWin ? (
+              <div className="text-center space-y-2 animate-fade-in">
+                <div className="flex items-center justify-center gap-2">
+                  <Skull className="h-8 w-8 text-destructive animate-bounce" />
+                  <span className="text-2xl">💀</span>
+                </div>
+                <p className="font-bold text-destructive text-lg">
+                  {teamBNames} kann nicht mehr gewinnen!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Bräuchten {teamBNeeds} Punkte, aber maximal {maxPointsRemaining} möglich
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 text-primary">
+                  <Trophy className="h-5 w-5" />
+                  <span className="font-semibold">Letzte Runde!</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">{teamANames} braucht</p>
+                    <p className={cn(
+                      "text-2xl font-bold",
+                      teamANeeds <= 0 ? "text-primary" : "text-primary"
+                    )}>
+                      {teamANeeds <= 0 ? (
+                        <span className="flex items-center justify-center gap-1">
+                          <PartyPopper className="h-5 w-5" />
+                          Führt!
+                        </span>
+                      ) : (
+                        `${teamANeeds} Pkt`
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">{teamBNames} braucht</p>
+                    <p className={cn(
+                      "text-2xl font-bold",
+                      teamBNeeds <= 0 ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      {teamBNeeds <= 0 ? (
+                        <span className="flex items-center justify-center gap-1">
+                          <PartyPopper className="h-5 w-5" />
+                          Führt!
+                        </span>
+                      ) : (
+                        `${teamBNeeds} Pkt`
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Fines Summary */}
       {fines.length > 0 && (
