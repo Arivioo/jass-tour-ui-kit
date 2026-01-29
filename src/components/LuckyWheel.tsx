@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,10 +16,50 @@ interface LuckyWheelProps {
 
 const WHEEL_COLORS = [
   'hsl(var(--primary))',
-  'hsl(var(--secondary))',
-  'hsl(var(--accent))',
-  'hsl(var(--muted))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
 ];
+
+// Create SVG arc path for a pie segment
+function createArcPath(
+  centerX: number,
+  centerY: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number
+): string {
+  const startRad = (startAngle - 90) * (Math.PI / 180);
+  const endRad = (endAngle - 90) * (Math.PI / 180);
+  
+  const x1 = centerX + radius * Math.cos(startRad);
+  const y1 = centerY + radius * Math.sin(startRad);
+  const x2 = centerX + radius * Math.cos(endRad);
+  const y2 = centerY + radius * Math.sin(endRad);
+  
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+  
+  return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+}
+
+// Get text position for a segment
+function getTextPosition(
+  centerX: number,
+  centerY: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number
+): { x: number; y: number; rotation: number } {
+  const midAngle = (startAngle + endAngle) / 2;
+  const rad = (midAngle - 90) * (Math.PI / 180);
+  const textRadius = radius * 0.6;
+  
+  return {
+    x: centerX + textRadius * Math.cos(rad),
+    y: centerY + textRadius * Math.sin(rad),
+    rotation: midAngle,
+  };
+}
 
 export function LuckyWheel({ players, onComplete }: LuckyWheelProps) {
   const [isSpinning, setIsSpinning] = useState(false);
@@ -28,9 +68,11 @@ export function LuckyWheel({ players, onComplete }: LuckyWheelProps) {
   const [winner, setWinner] = useState<Player | null>(null);
   const [remainingPlayers, setRemainingPlayers] = useState<Player[]>(players);
   const [orderedResults, setOrderedResults] = useState<Player[]>([]);
-  const wheelRef = useRef<HTMLDivElement>(null);
 
   const segmentAngle = 360 / remainingPlayers.length;
+  const wheelSize = 220;
+  const center = wheelSize / 2;
+  const radius = wheelSize / 2 - 10;
 
   const spinWheel = () => {
     if (isSpinning || remainingPlayers.length === 0) return;
@@ -38,10 +80,10 @@ export function LuckyWheel({ players, onComplete }: LuckyWheelProps) {
     setIsSpinning(true);
     setShowResult(false);
 
-    // Random number of full rotations (3-5) plus random segment
-    const fullRotations = 3 + Math.random() * 2;
-    const randomSegment = Math.floor(Math.random() * remainingPlayers.length);
-    const targetRotation = rotation + (fullRotations * 360) + (randomSegment * segmentAngle) + (segmentAngle / 2);
+    // Random number of full rotations (4-6) plus random final position
+    const fullRotations = 4 + Math.random() * 2;
+    const randomAngle = Math.random() * 360;
+    const targetRotation = rotation + (fullRotations * 360) + randomAngle;
 
     setRotation(targetRotation);
 
@@ -50,8 +92,12 @@ export function LuckyWheel({ players, onComplete }: LuckyWheelProps) {
       setIsSpinning(false);
       
       // Calculate which segment the pointer landed on
-      const normalizedRotation = targetRotation % 360;
-      const winnerIndex = Math.floor((360 - normalizedRotation + segmentAngle / 2) / segmentAngle) % remainingPlayers.length;
+      // The pointer is at the top (0 degrees), so we need to find which segment is there
+      const normalizedRotation = ((targetRotation % 360) + 360) % 360;
+      // Since the wheel rotates clockwise, the segment at top is the one where
+      // 360 - normalizedRotation falls into
+      const pointerAngle = (360 - normalizedRotation + 360) % 360;
+      const winnerIndex = Math.floor(pointerAngle / segmentAngle) % remainingPlayers.length;
       const selectedPlayer = remainingPlayers[winnerIndex];
       
       setWinner(selectedPlayer);
@@ -78,8 +124,8 @@ export function LuckyWheel({ players, onComplete }: LuckyWheelProps) {
           setShowResult(false);
           setWinner(null);
         }
-      }, 1500);
-    }, 3000);
+      }, 2000);
+    }, 3500);
   };
 
   return (
@@ -110,78 +156,98 @@ export function LuckyWheel({ players, onComplete }: LuckyWheelProps) {
       {/* Wheel container */}
       <div className="relative">
         {/* Pointer */}
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
-          <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-primary drop-shadow-lg" />
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-10">
+          <div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[24px] border-l-transparent border-r-transparent border-t-primary drop-shadow-lg" />
         </div>
 
-        {/* Wheel */}
-        <div
-          ref={wheelRef}
-          className="relative w-48 h-48 rounded-full border-4 border-primary shadow-xl overflow-hidden"
+        {/* SVG Wheel */}
+        <svg
+          width={wheelSize}
+          height={wheelSize}
+          className="drop-shadow-xl"
           style={{
             transform: `rotate(${rotation}deg)`,
-            transition: isSpinning ? 'transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
+            transition: isSpinning ? 'transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
           }}
         >
+          {/* Outer ring */}
+          <circle
+            cx={center}
+            cy={center}
+            r={radius + 5}
+            fill="none"
+            stroke="hsl(var(--primary))"
+            strokeWidth="4"
+          />
+          
+          {/* Segments */}
           {remainingPlayers.map((player, index) => {
             const startAngle = index * segmentAngle;
+            const endAngle = (index + 1) * segmentAngle;
+            const path = createArcPath(center, center, radius, startAngle, endAngle);
+            const textPos = getTextPosition(center, center, radius, startAngle, endAngle);
             const color = WHEEL_COLORS[index % WHEEL_COLORS.length];
             
             return (
-              <div
-                key={player.playerId}
-                className="absolute w-full h-full"
-                style={{
-                  clipPath: remainingPlayers.length === 2
-                    ? `polygon(50% 50%, ${index === 0 ? '0% 0%, 100% 0%, 100% 50%, 0% 50%' : '0% 50%, 100% 50%, 100% 100%, 0% 100%'})`
-                    : `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.tan((segmentAngle * Math.PI) / 360)}% 0%)`,
-                  transform: `rotate(${startAngle}deg)`,
-                  transformOrigin: '50% 50%',
-                }}
-              >
-                <div
-                  className="absolute inset-0"
-                  style={{ backgroundColor: color }}
+              <g key={player.playerId}>
+                {/* Segment */}
+                <path
+                  d={path}
+                  fill={color}
+                  stroke="hsl(var(--background))"
+                  strokeWidth="2"
                 />
-              </div>
+                {/* Segment border line */}
+                <line
+                  x1={center}
+                  y1={center}
+                  x2={center + radius * Math.cos((startAngle - 90) * Math.PI / 180)}
+                  y2={center + radius * Math.sin((startAngle - 90) * Math.PI / 180)}
+                  stroke="hsl(var(--background))"
+                  strokeWidth="2"
+                />
+                {/* Player name */}
+                <text
+                  x={textPos.x}
+                  y={textPos.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="text-xs font-bold fill-primary-foreground"
+                  style={{
+                    transform: `rotate(${textPos.rotation}deg)`,
+                    transformOrigin: `${textPos.x}px ${textPos.y}px`,
+                  }}
+                >
+                  {player.name}
+                </text>
+              </g>
             );
           })}
           
-          {/* Player names */}
-          {remainingPlayers.map((player, index) => {
-            const angle = (index * segmentAngle) + (segmentAngle / 2) - 90;
-            const radius = 60;
-            const x = 96 + radius * Math.cos((angle * Math.PI) / 180);
-            const y = 96 + radius * Math.sin((angle * Math.PI) / 180);
-            
-            return (
-              <div
-                key={`name-${player.playerId}`}
-                className="absolute text-xs font-bold text-foreground drop-shadow-sm whitespace-nowrap"
-                style={{
-                  left: `${x}px`,
-                  top: `${y}px`,
-                  transform: `translate(-50%, -50%) rotate(${angle + 90}deg)`,
-                }}
-              >
-                {player.name}
-              </div>
-            );
-          })}
-
           {/* Center circle */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background border-2 border-primary shadow-inner flex items-center justify-center">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
-        </div>
+          <circle
+            cx={center}
+            cy={center}
+            r={25}
+            fill="hsl(var(--background))"
+            stroke="hsl(var(--primary))"
+            strokeWidth="3"
+          />
+          <circle
+            cx={center}
+            cy={center}
+            r={18}
+            fill="hsl(var(--primary))"
+          />
+        </svg>
       </div>
 
       {/* Result announcement */}
       {showResult && winner && (
         <div className="animate-scale-in text-center space-y-1">
-          <p className="text-lg font-bold text-primary">🎉 {winner.name}!</p>
+          <p className="text-xl font-bold text-primary">🎉 {winner.name}!</p>
           <p className="text-sm text-muted-foreground">
-            Platz {orderedResults.length}
+            bekommt Platz {orderedResults.length}
           </p>
         </div>
       )}
@@ -200,12 +266,50 @@ export function LuckyWheel({ players, onComplete }: LuckyWheelProps) {
         {isSpinning ? 'Dreht...' : remainingPlayers.length === players.length ? 'Glücksrad drehen!' : 'Weiter drehen!'}
       </Button>
 
-      {/* Remaining players */}
-      {remainingPlayers.length < players.length && remainingPlayers.length > 0 && (
-        <p className="text-xs text-muted-foreground">
+      {/* Remaining players info */}
+      {remainingPlayers.length < players.length && remainingPlayers.length > 1 && (
+        <p className="text-xs text-muted-foreground text-center">
           Noch im Rennen: {remainingPlayers.map(p => p.name).join(', ')}
         </p>
       )}
+    </div>
+  );
+}
+
+// Demo component to show wheel with different player counts
+export function LuckyWheelDemo() {
+  const twoPlayers = [
+    { playerId: '1', name: 'Mötzi', wins: 2 },
+    { playerId: '2', name: 'Poli', wins: 2 },
+  ];
+  
+  const threePlayers = [
+    { playerId: '1', name: 'Mötzi', wins: 2 },
+    { playerId: '2', name: 'Poli', wins: 2 },
+    { playerId: '3', name: 'Husi', wins: 2 },
+  ];
+  
+  const fourPlayers = [
+    { playerId: '1', name: 'Mötzi', wins: 2 },
+    { playerId: '2', name: 'Poli', wins: 2 },
+    { playerId: '3', name: 'Husi', wins: 2 },
+    { playerId: '4', name: 'Rötschi', wins: 2 },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-4">
+      <div className="text-center space-y-4">
+        <h3 className="font-bold text-lg">2 Spieler</h3>
+        <LuckyWheel players={twoPlayers} onComplete={() => {}} />
+      </div>
+      <div className="text-center space-y-4">
+        <h3 className="font-bold text-lg">3 Spieler</h3>
+        <LuckyWheel players={threePlayers} onComplete={() => {}} />
+      </div>
+      <div className="text-center space-y-4">
+        <h3 className="font-bold text-lg">4 Spieler</h3>
+        <LuckyWheel players={fourPlayers} onComplete={() => {}} />
+      </div>
     </div>
   );
 }
