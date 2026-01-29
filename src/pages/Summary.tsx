@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, Shuffle, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle } from 'lucide-react';
+import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle } from 'lucide-react';
 import { PLAYERS, FINE_TYPES, formatCHF } from '@/lib/players';
 import { cn } from '@/lib/utils';
-
+import { LuckyWheel } from '@/components/LuckyWheel';
 interface Fine {
   id: string;
   playerId: string;
@@ -69,7 +69,6 @@ export default function Summary() {
   const state = location.state as LocationState | undefined;
   const [leftFirst, setLeftFirst] = useState('');
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
-  const [isRandomizing, setIsRandomizing] = useState(false);
   const [showTiebreaker, setShowTiebreaker] = useState(false);
   const [tiedPlayers, setTiedPlayers] = useState<string[]>([]);
 
@@ -142,47 +141,24 @@ export default function Summary() {
     };
   });
 
-  // Randomize tied players
-  const handleRandomize = () => {
-    setIsRandomizing(true);
-    
-    // Animate randomization
-    let iterations = 0;
-    const maxIterations = 15;
-    const interval = setInterval(() => {
-      iterations++;
+  // Handle wheel completion
+  const handleWheelComplete = (orderedPlayers: RankingPlayer[]) => {
+    setRankings(prev => {
+      const newRankings = [...prev];
+      const startRank = prev.find(r => r.playerId === orderedPlayers[0].playerId)?.rank || 1;
       
-      setRankings(prev => {
-        const tiedWins = [...new Set(prev.filter(r => tiedPlayers.includes(r.playerId)).map(r => r.wins))];
-        const newRankings = [...prev];
-        
-        tiedWins.forEach(wins => {
-          const tiedIndices = newRankings
-            .map((r, i) => r.wins === wins ? i : -1)
-            .filter(i => i !== -1);
-          
-          // Shuffle tied players
-          for (let i = tiedIndices.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            const tempRank = newRankings[tiedIndices[i]].rank;
-            newRankings[tiedIndices[i]].rank = newRankings[tiedIndices[j]].rank;
-            newRankings[tiedIndices[j]].rank = tempRank;
-            
-            // Swap positions in array
-            [newRankings[tiedIndices[i]], newRankings[tiedIndices[j]]] = 
-              [newRankings[tiedIndices[j]], newRankings[tiedIndices[i]]];
-          }
-        });
-        
-        return newRankings.sort((a, b) => a.rank - b.rank);
+      orderedPlayers.forEach((player, idx) => {
+        const rankingIdx = newRankings.findIndex(r => r.playerId === player.playerId);
+        if (rankingIdx !== -1) {
+          newRankings[rankingIdx].rank = startRank + idx;
+        }
       });
       
-      if (iterations >= maxIterations) {
-        clearInterval(interval);
-        setIsRandomizing(false);
-        setShowTiebreaker(false);
-      }
-    }, 100);
+      return newRankings.sort((a, b) => a.rank - b.rank);
+    });
+    
+    setShowTiebreaker(false);
+    setTiedPlayers([]);
   };
 
   // Move player up in ranking
@@ -223,29 +199,23 @@ export default function Summary() {
         <p className="text-muted-foreground">Übersicht des Jass-Abends</p>
       </div>
 
-      {/* Tiebreaker Card */}
+      {/* Lucky Wheel Tiebreaker */}
       {showTiebreaker && tiedPlayers.length > 0 && (
-        <Card className="border-2 border-primary/50 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="font-semibold text-primary flex items-center gap-2">
-                  <Shuffle className="h-5 w-5" />
-                  Gleichstand erkannt!
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {tiedPlayers.length} Spieler haben die gleiche Anzahl Siege
-                </p>
-              </div>
-              <Button 
-                onClick={handleRandomize}
-                disabled={isRandomizing}
-                className="gap-2"
-              >
-                <Shuffle className={cn("h-4 w-4", isRandomizing && "animate-spin")} />
-                {isRandomizing ? 'Auslosen...' : 'Auslosen'}
-              </Button>
-            </div>
+        <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Trophy className="h-5 w-5 text-primary" />
+              Gleichstand! Glücksrad entscheidet
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {tiedPlayers.length} Spieler haben die gleiche Anzahl Siege – das Glücksrad entscheidet die Reihenfolge!
+            </p>
+          </CardHeader>
+          <CardContent>
+            <LuckyWheel
+              players={rankings.filter(r => tiedPlayers.includes(r.playerId))}
+              onComplete={handleWheelComplete}
+            />
           </CardContent>
         </Card>
       )}
@@ -267,8 +237,7 @@ export default function Summary() {
               key={player.playerId}
               className={cn(
                 "flex items-center gap-3 rounded-lg border p-3 transition-all",
-                isRandomizing && tiedPlayers.includes(player.playerId) && "animate-pulse bg-primary/10",
-                tiedPlayers.includes(player.playerId) && !isRandomizing && "border-primary/30"
+                tiedPlayers.includes(player.playerId) && "border-primary/30"
               )}
             >
               <div className="flex flex-col gap-0.5">
@@ -277,7 +246,7 @@ export default function Summary() {
                   size="icon"
                   className="h-6 w-6"
                   onClick={() => moveUp(index)}
-                  disabled={index === 0 || isRandomizing}
+                  disabled={index === 0}
                 >
                   <ArrowUp className="h-3 w-3" />
                 </Button>
@@ -286,7 +255,7 @@ export default function Summary() {
                   size="icon"
                   className="h-6 w-6"
                   onClick={() => moveDown(index)}
-                  disabled={index === rankings.length - 1 || isRandomizing}
+                  disabled={index === rankings.length - 1}
                 >
                   <ArrowDown className="h-3 w-3" />
                 </Button>
