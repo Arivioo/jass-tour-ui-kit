@@ -13,6 +13,7 @@ import Rangliste from "./pages/Rangliste";
 import Statuten from "./pages/Statuten";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import WheelDemo from "./pages/WheelDemo";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/rangliste" element={<Rangliste />} />
             <Route path="/statuten" element={<Statuten />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/wheel-demo" element={<WheelDemo />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

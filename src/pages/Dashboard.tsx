@@ -117,6 +117,15 @@ export default function Dashboard() {
           onClick={() => navigate('/rangliste')}
         />
       </div>
+
+      {/* Wheel Demo Link - temporary */}
+      <Button 
+        variant="outline" 
+        className="w-full gap-2"
+        onClick={() => navigate('/wheel-demo')}
+      >
+        🎡 Glücksrad Demo ansehen
+      </Button>
     </div>
   );
 }
