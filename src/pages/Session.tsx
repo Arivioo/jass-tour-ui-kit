@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Users, Trophy, Calculator, AlertCircle, ChevronRight, ChevronLeft, X, Plus, Skull, PartyPopper, Sparkles } from 'lucide-react';
-import { PLAYERS, FINE_TYPES, formatCHF, type Player } from '@/lib/players';
+import { Users, Trophy, Calculator, AlertCircle, ChevronRight, ChevronLeft, X, Plus, Skull, PartyPopper, Sparkles, MapPin } from 'lucide-react';
+import { PLAYERS, FINE_TYPES, LOCATIONS, formatCHF, type Player } from '@/lib/players';
 import { cn } from '@/lib/utils';
 
 type WizardStep = 'players' | 'teams' | 'points';
@@ -17,6 +17,8 @@ interface Fine {
   type: string;
   amount: number;
   note?: string;
+  matchNumber?: number;
+  location?: string;
 }
 
 interface MatchResult {
@@ -26,6 +28,8 @@ interface MatchResult {
   teamBTotal: number;
   winner: 'A' | 'B' | 'tie';
   fines: Fine[];
+  location: string;
+  matchNumber: number;
 }
 
 // Track wins per player (1 point per match win)
@@ -42,6 +46,7 @@ interface HistoryEntry {
   scoresA: (number | null)[];
   scoresB: (number | null)[];
   fines: Fine[];
+  location: string;
 }
 
 export default function Session() {
@@ -58,6 +63,8 @@ export default function Session() {
   const [playerWins, setPlayerWins] = useState<PlayerWins>({});
   const [showWinnerAnimation, setShowWinnerAnimation] = useState(false);
   const [winnerTeamNames, setWinnerTeamNames] = useState('');
+  const [location, setLocation] = useState<string>('');
+  const [customLocation, setCustomLocation] = useState<string>('');
 
   const totalMatches = 5;
   const totalRounds = 8;
@@ -69,6 +76,12 @@ export default function Session() {
   ];
 
   const currentStepIndex = steps.findIndex(s => s.key === step);
+  
+  // Get display location name
+  const getLocationName = (loc: string, custom?: string) => {
+    if (loc === 'custom') return custom || 'Unbekannt';
+    return LOCATIONS.find(l => l.id === loc)?.name || loc;
+  };
 
   // Check if all rounds have scores
   const allRoundsComplete = scoresA.every(s => s !== null);
@@ -87,6 +100,7 @@ export default function Session() {
           setScoresA(Array(8).fill(null));
           setScoresB(Array(8).fill(null));
           setFines(prevResult.fines);
+          setLocation(prevResult.location || '');
           setStep('points');
           // Remove this result from matchResults
           setMatchResults(matchResults.slice(0, -1));
@@ -119,13 +133,24 @@ export default function Session() {
       const teamATotal = scoresA.reduce((sum, s) => sum + (s ?? 0), 0);
       const teamBTotal = scoresB.reduce((sum, s) => sum + (s ?? 0), 0);
       const winner = teamATotal > teamBTotal ? 'A' : teamBTotal > teamATotal ? 'B' : 'tie';
+      const matchLocation = getLocationName(location, customLocation);
+      
+      // Add location and match info to fines
+      const finesWithMeta = fines.map(f => ({
+        ...f,
+        matchNumber: currentMatch,
+        location: matchLocation,
+      }));
+      
       const result: MatchResult = {
         teamA: [...teamA],
         teamB: [...teamB],
         teamATotal,
         teamBTotal,
         winner,
-        fines: [...fines],
+        fines: finesWithMeta,
+        location: matchLocation,
+        matchNumber: currentMatch,
       };
       
       // Update player wins (1 point per match win)
@@ -158,9 +183,14 @@ export default function Session() {
         if (currentMatch < totalMatches) {
           setCurrentMatch(currentMatch + 1);
           setStep('teams');
+          // Reset for new match - clear team selections
+          setTeamA([]);
+          setTeamB([]);
           setScoresA(Array(8).fill(null));
           setScoresB(Array(8).fill(null));
           setFines([]);
+          setLocation('');
+          setCustomLocation('');
         } else {
           // Navigate to summary with ranking data
           navigate('/summary', { state: { matchResults: [...matchResults, result], playerWins: newPlayerWins } });
@@ -246,6 +276,10 @@ export default function Session() {
           teamB={teamB}
           onTeamAChange={setTeamA}
           onTeamBChange={setTeamB}
+          location={location}
+          customLocation={customLocation}
+          onLocationChange={setLocation}
+          onCustomLocationChange={setCustomLocation}
           onNext={handleNextStep}
           onPrev={handlePrevStep}
           matchNumber={currentMatch}
@@ -351,6 +385,10 @@ function TeamsStep({
   teamB,
   onTeamAChange,
   onTeamBChange,
+  location,
+  customLocation,
+  onLocationChange,
+  onCustomLocationChange,
   onNext,
   onPrev,
   matchNumber,
@@ -361,6 +399,10 @@ function TeamsStep({
   teamB: string[];
   onTeamAChange: (ids: string[]) => void;
   onTeamBChange: (ids: string[]) => void;
+  location: string;
+  customLocation: string;
+  onLocationChange: (loc: string) => void;
+  onCustomLocationChange: (loc: string) => void;
   onNext: () => void;
   onPrev: () => void;
   matchNumber: number;
@@ -378,6 +420,33 @@ function TeamsStep({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Location Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            Location
+          </label>
+          <Select value={location} onValueChange={onLocationChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Location wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {LOCATIONS.map((loc) => (
+                <SelectItem key={loc.id} value={loc.id}>
+                  {loc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {location === 'custom' && (
+            <Input
+              placeholder="Location eingeben..."
+              value={customLocation}
+              onChange={(e) => onCustomLocationChange(e.target.value)}
+            />
+          )}
+        </div>
+
         {/* Team A */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Team A</label>
@@ -448,7 +517,7 @@ function TeamsStep({
           <Button 
             className="flex-1 gap-2" 
             onClick={onNext}
-            disabled={teamA.length < 2 || teamB.length < 2}
+            disabled={teamA.length < 2 || teamB.length < 2 || !location || (location === 'custom' && !customLocation)}
           >
             Weiter
             <ChevronRight className="h-4 w-4" />
