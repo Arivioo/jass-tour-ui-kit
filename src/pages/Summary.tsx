@@ -1,32 +1,87 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, Share2, CheckCircle, GripVertical } from 'lucide-react';
+import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal } from 'lucide-react';
 import { PLAYERS, formatCHF } from '@/lib/players';
 
-// Placeholder summary data
-const SUMMARY_DATA = {
+interface LocationState {
+  matchResults?: Array<{
+    teamA: string[];
+    teamB: string[];
+    teamATotal: number;
+    teamBTotal: number;
+    winner: 'A' | 'B' | 'tie';
+    fines: Array<{ playerId: string; amount: number }>;
+  }>;
+  playerWins?: { [playerId: string]: number };
+}
+
+// Placeholder summary data for when no state is passed
+const PLACEHOLDER_SUMMARY = {
   rankings: [
-    { playerId: '1', name: 'Hans', points: 1250, rank: 1 },
-    { playerId: '2', name: 'Peter', points: 1180, rank: 2 },
-    { playerId: '3', name: 'Urs', points: 1050, rank: 3 },
-    { playerId: '4', name: 'Beat', points: 920, rank: 4 },
+    { playerId: '1', name: 'Mötzi', wins: 3, rank: 1 },
+    { playerId: '2', name: 'Poli', wins: 2, rank: 2 },
+    { playerId: '3', name: 'Husi', wins: 1, rank: 3 },
+    { playerId: '4', name: 'Rötschi', wins: 0, rank: 4 },
   ],
   payments: [
-    { playerId: '1', name: 'Hans', buyIn: 25, fines: 15, rankFine: 0, total: 40 },
-    { playerId: '2', name: 'Peter', buyIn: 25, fines: 20, rankFine: 10, total: 55 },
-    { playerId: '3', name: 'Urs', buyIn: 25, fines: 10, rankFine: 15, total: 50 },
-    { playerId: '4', name: 'Beat', buyIn: 25, fines: 25, rankFine: 20, total: 70 },
+    { playerId: '1', name: 'Mötzi', buyIn: 25, fines: 15, rankFine: 0, total: 40 },
+    { playerId: '2', name: 'Poli', buyIn: 25, fines: 20, rankFine: 10, total: 55 },
+    { playerId: '3', name: 'Husi', buyIn: 25, fines: 10, rankFine: 15, total: 50 },
+    { playerId: '4', name: 'Rötschi', buyIn: 25, fines: 25, rankFine: 20, total: 70 },
   ],
 };
 
-const RANK_FINES = { 1: 0, 2: 10, 3: 15, 4: 20 };
+const RANK_FINES: { [key: number]: number } = { 1: 0, 2: 10, 3: 15, 4: 20 };
 
 export default function Summary() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState | undefined;
   const [leftFirst, setLeftFirst] = useState('');
+
+  // Calculate rankings from match wins (1 point per win)
+  const rankings = state?.playerWins
+    ? PLAYERS
+        .map(player => ({
+          playerId: player.id,
+          name: player.name,
+          wins: state.playerWins?.[player.id] || 0,
+          rank: 0,
+        }))
+        .sort((a, b) => b.wins - a.wins)
+        .map((player, index) => ({ ...player, rank: index + 1 }))
+    : PLACEHOLDER_SUMMARY.rankings;
+
+  // Calculate fines from match results
+  const playerFines = state?.matchResults
+    ? PLAYERS.reduce((acc, player) => {
+        const totalFines = state.matchResults?.reduce((sum, match) => {
+          return sum + match.fines
+            .filter(f => f.playerId === player.id)
+            .reduce((s, f) => s + f.amount, 0);
+        }, 0) || 0;
+        acc[player.id] = totalFines;
+        return acc;
+      }, {} as { [key: string]: number })
+    : null;
+
+  // Calculate payments with rank fines based on wins
+  const payments = rankings.map(player => {
+    const finesAmount = playerFines?.[player.playerId] || 
+      PLACEHOLDER_SUMMARY.payments.find(p => p.playerId === player.playerId)?.fines || 0;
+    const rankFine = RANK_FINES[player.rank] || 0;
+    return {
+      playerId: player.playerId,
+      name: player.name,
+      buyIn: 25,
+      fines: finesAmount,
+      rankFine,
+      total: 25 + finesAmount + rankFine,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -36,21 +91,23 @@ export default function Summary() {
         <p className="text-muted-foreground">Übersicht des Jass-Abends</p>
       </div>
 
-      {/* Rankings */}
+      {/* Rankings - based on match wins */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
-            Rangliste
+            Schlussrangliste
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            1 Punkt pro gewonnenes Match
+          </p>
         </CardHeader>
         <CardContent className="space-y-2">
-          {SUMMARY_DATA.rankings.map((player) => (
+          {rankings.map((player) => (
             <div
               key={player.playerId}
               className="flex items-center gap-3 rounded-lg border p-3"
             >
-              <GripVertical className="h-5 w-5 cursor-grab text-muted-foreground" />
               <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
                 player.rank === 1 
                   ? 'bg-yellow-100 text-yellow-700' 
@@ -64,7 +121,10 @@ export default function Summary() {
               </div>
               <div className="flex-1">
                 <div className="font-medium">{player.name}</div>
-                <div className="text-sm text-muted-foreground">{player.points} Punkte</div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Medal className="h-3 w-3" />
+                  {player.wins} {player.wins === 1 ? 'Sieg' : 'Siege'}
+                </div>
               </div>
             </div>
           ))}
@@ -80,7 +140,7 @@ export default function Summary() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {SUMMARY_DATA.payments.map((player) => (
+          {payments.map((player) => (
             <div
               key={player.playerId}
               className="rounded-lg border bg-muted/30 p-4"
