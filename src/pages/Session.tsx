@@ -357,13 +357,26 @@ function PointsStep({
     return fines.filter(f => f.note?.startsWith(`Runde ${round + 1}`));
   };
 
-  // Calculate if round 7 is filled
+  // Calculate win conditions after round 7
+  // In Jass, points per round = 157, split between both teams
+  // If Team A scores X, Team B scores (157 - X)
+  // So to win, Team A needs: teamATotal + X > teamBTotal + (remainingRounds * 157 - X)
+  // Simplified: X > (teamBTotal - teamATotal + remainingRounds * 157) / 2
   const roundsPlayed = scoresA.filter(s => s !== null).length;
-  const maxPointsRemaining = (8 - roundsPlayed) * 157;
-  const teamANeeds = teamBTotal - teamATotal + 1;
-  const teamBNeeds = teamATotal - teamBTotal + 1;
-  const teamACantWin = roundsPlayed >= 7 && teamANeeds > maxPointsRemaining;
-  const teamBCantWin = roundsPlayed >= 7 && teamBNeeds > maxPointsRemaining;
+  const remainingRounds = 8 - roundsPlayed;
+  const currentDiff = teamBTotal - teamATotal; // positive = B leads, negative = A leads
+  
+  // Points Team A needs to score in remaining rounds to win
+  // X > (diff + remaining * 157) / 2, so min X = floor((diff + remaining * 157) / 2) + 1
+  const teamAMinToWin = Math.floor((currentDiff + remainingRounds * 157) / 2) + 1;
+  const teamBMinToWin = Math.floor((-currentDiff + remainingRounds * 157) / 2) + 1;
+  
+  // Max points possible in remaining rounds
+  const maxPossible = remainingRounds * 157;
+  
+  // Can't win if minimum needed exceeds maximum possible
+  const teamACantWin = roundsPlayed >= 7 && teamAMinToWin > maxPossible;
+  const teamBCantWin = roundsPlayed >= 7 && teamBMinToWin > maxPossible;
   const showWinCondition = roundsPlayed >= 7 && roundsPlayed < 8;
 
   return (
@@ -549,7 +562,7 @@ function PointsStep({
                   {teamANames} kann nicht mehr gewinnen!
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Bräuchten {teamANeeds} Punkte, aber maximal {maxPointsRemaining} möglich
+                  Bräuchten {teamAMinToWin} Punkte, aber maximal {maxPossible} möglich
                 </p>
               </div>
             ) : teamBCantWin ? (
@@ -562,7 +575,7 @@ function PointsStep({
                   {teamBNames} kann nicht mehr gewinnen!
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Bräuchten {teamBNeeds} Punkte, aber maximal {maxPointsRemaining} möglich
+                  Bräuchten {teamBMinToWin} Punkte, aber maximal {maxPossible} möglich
                 </p>
               </div>
             ) : (
@@ -576,15 +589,15 @@ function PointsStep({
                     <p className="text-xs text-muted-foreground">{teamANames} braucht</p>
                     <p className={cn(
                       "text-2xl font-bold",
-                      teamANeeds <= 0 ? "text-primary" : "text-primary"
+                      teamAMinToWin <= 0 ? "text-primary" : "text-primary"
                     )}>
-                      {teamANeeds <= 0 ? (
+                      {teamAMinToWin <= 0 ? (
                         <span className="flex items-center justify-center gap-1">
                           <PartyPopper className="h-5 w-5" />
                           Führt!
                         </span>
                       ) : (
-                        `${teamANeeds} Pkt`
+                        `${teamAMinToWin} Pkt`
                       )}
                     </p>
                   </div>
@@ -592,15 +605,15 @@ function PointsStep({
                     <p className="text-xs text-muted-foreground">{teamBNames} braucht</p>
                     <p className={cn(
                       "text-2xl font-bold",
-                      teamBNeeds <= 0 ? "text-primary" : "text-muted-foreground"
+                      teamBMinToWin <= 0 ? "text-primary" : "text-muted-foreground"
                     )}>
-                      {teamBNeeds <= 0 ? (
+                      {teamBMinToWin <= 0 ? (
                         <span className="flex items-center justify-center gap-1">
                           <PartyPopper className="h-5 w-5" />
                           Führt!
                         </span>
                       ) : (
-                        `${teamBNeeds} Pkt`
+                        `${teamBMinToWin} Pkt`
                       )}
                     </p>
                   </div>
