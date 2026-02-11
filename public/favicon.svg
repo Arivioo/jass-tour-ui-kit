@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Card background -->
+  <rect x="4" y="2" width="24" height="28" rx="3" fill="#fff" stroke="#1a1a2e" stroke-width="1.5"/>
+  <!-- Swiss shield shape -->
+  <path d="M16 8 L22 11 L22 18 Q22 23 16 26 Q10 23 10 18 L10 11 Z" fill="#dc2626"/>
+  <!-- Swiss cross -->
+  <rect x="14" y="12" width="4" height="10" rx="0.5" fill="#fff"/>
+  <rect x="11" y="15" width="10" height="4" rx="0.5" fill="#fff"/>
+</svg>
