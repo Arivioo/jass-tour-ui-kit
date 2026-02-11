@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Info, Loader2, TrendingUp, Calendar, Medal, Flame, Target, Frown, Crown, Zap, Snowflake, Heart, Shuffle, Award, Star, ThumbsDown, Sparkles } from 'lucide-react';
+import { Trophy, Info, Loader2, TrendingUp, Calendar, Medal, Flame, Target, Frown, Crown, Snowflake, Award, Star, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,7 +36,7 @@ const PLAYER_NOTES: { [key: string]: string } = {
 
 export default function Rangliste() {
   // Fetch all-time rankings with rank distribution
-  const { data: rankings = [], isLoading: rankingsLoading } = useQuery({
+  const { data: rankings = [], isLoading: rankingsLoading, error: rankingsError } = useQuery({
     queryKey: ['all-time-rankings-detailed'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -48,7 +48,7 @@ export default function Rangliste() {
       // Aggregate stats per player
       const statsMap: { [key: string]: PlayerStats } = {};
       
-      (data || []).forEach((ranking: any) => {
+      (data || []).forEach((ranking: { player_id: string; final_rank: number; players: { name: string } | null }) => {
         const playerId = ranking.player_id;
         if (!statsMap[playerId]) {
           statsMap[playerId] = {
@@ -75,7 +75,7 @@ export default function Rangliste() {
   });
 
   // Fetch individual sessions since 2021 (exclude historical entries)
-  const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
+  const { data: sessions = [], isLoading: sessionsLoading, error: sessionsError } = useQuery({
     queryKey: ['session-details-since-2021'],
     queryFn: async () => {
       const { data: sessionsData, error: sessionsError } = await supabase
@@ -102,8 +102,8 @@ export default function Rangliste() {
         location: session.location,
         totalPot: session.total_pot,
         rankings: (rankingsData || [])
-          .filter((r: any) => r.session_id === session.id)
-          .map((r: any) => ({
+          .filter((r: { session_id: string; player_id: string; final_rank: number; players: { name: string } | null }) => r.session_id === session.id)
+          .map((r) => ({
             playerId: r.player_id,
             playerName: r.players?.name || 'Unknown',
             rank: r.final_rank,
@@ -112,20 +112,6 @@ export default function Rangliste() {
       }));
       
       return result;
-    },
-  });
-
-  // Fetch all session details for fun stats
-  const { data: allSessionRankings = [] } = useQuery({
-    queryKey: ['all-session-rankings-for-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('session_rankings')
-        .select('session_id, player_id, final_rank, players(name), sessions(date)')
-        .order('sessions(date)', { ascending: true });
-      
-      if (error) throw error;
-      return data || [];
     },
   });
 
@@ -139,8 +125,16 @@ export default function Rangliste() {
     );
   }
 
+  if (rankingsError || sessionsError) {
+    return (
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+        Daten konnten nicht geladen werden. Bitte versuche es erneut.
+      </div>
+    );
+  }
+
   // Calculate fun statistics
-  const funStats = calculateFunStats(rankings, allSessionRankings);
+  const funStats = calculateFunStats(rankings);
   const totalSessions2021 = sessions.length;
   const totalSessionsHistorical = 17;
   const totalSessionsAll = totalSessions2021 + totalSessionsHistorical;
@@ -461,7 +455,7 @@ export default function Rangliste() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions.map((session, index) => {
+                      {sessions.map((session) => {
                         const getRankPlayer = (rank: number) => 
                           session.rankings.find(r => r.rank === rank)?.playerName || '-';
                         
@@ -551,7 +545,7 @@ function AwardCard({
   );
 }
 
-function calculateFunStats(rankings: PlayerStats[], allRankings: any[]) {
+function calculateFunStats(rankings: PlayerStats[]) {
   if (rankings.length === 0) {
     return { awards: [], funComparisons: [] };
   }

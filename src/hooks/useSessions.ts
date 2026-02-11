@@ -219,13 +219,13 @@ export function useSessionsWithRankings() {
           
           return {
             ...session,
-            players: (rankings || []).map((r: any) => ({
+            players: (rankings || []).map((r: { players: { name: string } | null; final_rank: number; total_wins: number; total_fines: number }) => ({
               name: r.players?.name || 'Unknown',
               rank: r.final_rank,
               wins: r.total_wins,
               totalFines: r.total_fines,
             })),
-            matchCount: 5, // Default match count
+            matchCount: 5,
           };
         })
       );

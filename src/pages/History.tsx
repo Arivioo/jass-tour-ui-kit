@@ -3,11 +3,20 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Trophy, ChevronRight, Inbox, MapPin, Users, Medal, Loader2 } from 'lucide-react';
 import { formatCHF } from '@/lib/players';
+import { JASS } from '@/lib/constants';
 import { useSessionsWithRankings } from '@/hooks/useSessions';
 
 export default function History() {
   const navigate = useNavigate();
-  const { data: sessions, isLoading } = useSessionsWithRankings();
+  const { data: sessions, isLoading, error } = useSessionsWithRankings();
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+        Daten konnten nicht geladen werden. Bitte versuche es erneut.
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -42,7 +51,7 @@ export default function History() {
           />
           <StatCard 
             label="Matches" 
-            value={(sessionList.length * 5).toString()} 
+            value={(sessionList.length * JASS.MATCHES_PER_SESSION).toString()}
             icon={Medal}
           />
           <StatCard 

@@ -1,38 +1,39 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { Spade, Lock } from 'lucide-react';
-
-const CORRECT_PASSWORD = '6403';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (password === CORRECT_PASSWORD) {
-      // Store access in sessionStorage
-      sessionStorage.setItem('jass-access', 'granted');
-      toast({
-        title: 'Willkommen!',
-        description: 'Zugang gewährt.',
+    setLoading(true);
+    setError(false);
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('verify-jass-password', {
+        body: { password },
       });
-      navigate('/');
-    } else {
+
+      if (fnError || !data?.valid) {
+        setError(true);
+        setPassword('');
+      } else {
+        sessionStorage.setItem('jass-access', 'granted');
+        navigate('/');
+      }
+    } catch {
       setError(true);
       setPassword('');
-      toast({
-        variant: 'destructive',
-        title: 'Falsches Passwort',
-        description: 'Bitte versuche es erneut.',
-      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,9 +45,9 @@ export default function Auth() {
             <Spade className="h-8 w-8 text-primary" />
           </div>
           <CardTitle className="text-2xl">Beize Jass Tour</CardTitle>
-          <CardDescription>
+          <p className="text-sm text-muted-foreground">
             Gib das Passwort ein, um fortzufahren
-          </CardDescription>
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,6 +63,7 @@ export default function Auth() {
                 }}
                 className={`pl-10 ${error ? 'border-destructive' : ''}`}
                 autoFocus
+                disabled={loading}
               />
             </div>
             {error && (
@@ -69,8 +71,8 @@ export default function Auth() {
                 Falsches Passwort
               </p>
             )}
-            <Button type="submit" className="w-full">
-              Eintreten
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Prüfe...' : 'Eintreten'}
             </Button>
           </form>
         </CardContent>

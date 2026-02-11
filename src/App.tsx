@@ -1,28 +1,36 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { Loader2 } from "lucide-react";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Session from "./pages/Session";
-import History from "./pages/History";
-import Summary from "./pages/Summary";
-import Rangliste from "./pages/Rangliste";
-import Statuten from "./pages/Statuten";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Session = lazy(() => import("./pages/Session"));
+const History = lazy(() => import("./pages/History"));
+const Summary = lazy(() => import("./pages/Summary"));
+const Rangliste = lazy(() => import("./pages/Rangliste"));
+const Statuten = lazy(() => import("./pages/Statuten"));
+const Settings = lazy(() => import("./pages/Settings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <Toaster />
+    <BrowserRouter>
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route element={<ProtectedRoute />}>
@@ -40,8 +48,8 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+      </Suspense>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 

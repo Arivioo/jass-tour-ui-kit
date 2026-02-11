@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Users, Calendar, Palette, Plus, Pencil, Trash2, Save, Loader2 } from 'lucide-react';
+import { Users, Calendar, Plus, Pencil, Trash2, Save, Loader2 } from 'lucide-react';
 import { usePlayers, useUpdatePlayer, useAddPlayer, useDeletePlayer } from '@/hooks/usePlayers';
 import { useAppSettings, useUpdateNextDate } from '@/hooks/useAppSettings';
 import { useToast } from '@/hooks/use-toast';
@@ -24,8 +23,17 @@ export default function Settings() {
   const [nextTime, setNextTime] = useState('20:00');
 
   const handleAddPlayer = () => {
-    if (!newPlayerName.trim()) return;
-    addPlayer.mutate(newPlayerName.trim(), {
+    const name = newPlayerName.trim();
+    if (!name) return;
+    if (name.length > 30) {
+      toast({ variant: 'destructive', title: 'Name zu lang (max. 30 Zeichen)' });
+      return;
+    }
+    if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      toast({ variant: 'destructive', title: 'Spieler existiert bereits' });
+      return;
+    }
+    addPlayer.mutate(name, {
       onSuccess: () => {
         toast({ title: 'Spieler hinzugefügt!' });
         setNewPlayerName('');
@@ -53,8 +61,17 @@ export default function Settings() {
   };
 
   const handleSaveEdit = () => {
-    if (!editingId || !editName.trim()) return;
-    updatePlayer.mutate({ id: editingId, name: editName.trim() }, {
+    const name = editName.trim();
+    if (!editingId || !name) return;
+    if (name.length > 30) {
+      toast({ variant: 'destructive', title: 'Name zu lang (max. 30 Zeichen)' });
+      return;
+    }
+    if (players.some(p => p.id !== editingId && p.name.toLowerCase() === name.toLowerCase())) {
+      toast({ variant: 'destructive', title: 'Spieler existiert bereits' });
+      return;
+    }
+    updatePlayer.mutate({ id: editingId, name }, {
       onSuccess: () => {
         toast({ title: 'Spieler aktualisiert!' });
         setEditingId(null);
@@ -249,35 +266,6 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Display Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5 text-primary" />
-            Anzeige
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium">Kompakte Ansicht</div>
-              <div className="text-sm text-muted-foreground">
-                Weniger Abstände in Listen
-              </div>
-            </div>
-            <Switch />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium">Dark Mode</div>
-              <div className="text-sm text-muted-foreground">
-                Dunkles Farbschema
-              </div>
-            </div>
-            <Switch />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

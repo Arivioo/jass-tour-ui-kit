@@ -3,23 +3,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, Share2, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle, Calendar, Loader2 } from 'lucide-react';
+import { Trophy, CreditCard, Gift, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle, Calendar } from 'lucide-react';
 import { FINE_TYPES, formatCHF } from '@/lib/players';
+import { JASS } from '@/lib/constants';
 import { usePlayers } from '@/hooks/usePlayers';
 import { cn } from '@/lib/utils';
 import { LuckyWheel } from '@/components/LuckyWheel';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-
-interface Fine {
-  id: string;
-  playerId: string;
-  type: string;
-  amount: number;
-  note?: string;
-  matchNumber?: number;
-  location?: string;
-}
+import type { Fine, RankingPlayer } from '@/types/jass';
 
 interface HistorySession {
   id: string;
@@ -36,7 +28,6 @@ interface HistorySession {
 }
 
 interface LocationState {
-  // From Session wizard
   matchResults?: Array<{
     teamA: string[];
     teamB: string[];
@@ -48,16 +39,8 @@ interface LocationState {
     matchNumber?: number;
   }>;
   playerWins?: { [playerId: string]: number };
-  // From History page
   fromHistory?: boolean;
   historySession?: HistorySession;
-}
-
-interface RankingPlayer {
-  playerId: string;
-  name: string;
-  wins: number;
-  rank: number;
 }
 
 // Placeholder summary data for when no state is passed
@@ -83,13 +66,12 @@ const PLACEHOLDER_SUMMARY = {
   ],
 };
 
-const RANK_FINES: { [key: number]: number } = { 1: 0, 2: 10, 3: 15, 4: 20 };
 
 export default function Summary() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | undefined;
-  const { data: players = [], isLoading: playersLoading } = usePlayers();
+  const { data: players = [] } = usePlayers();
   const [leftFirst, setLeftFirst] = useState('');
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
   const [showTiebreaker, setShowTiebreaker] = useState(false);
@@ -217,16 +199,16 @@ export default function Summary() {
   // Calculate payments with rank fines based on wins
   const payments = rankings.map(player => {
     const finesAmount = playerFines[player.playerId] || 0;
-    const rankFine = RANK_FINES[player.rank] || 0;
+    const rankFine = JASS.RANK_FINES[player.rank] || 0;
     const playerFinesList = finesByPlayer[player.playerId] || [];
     return {
       playerId: player.playerId,
       name: player.name,
-      buyIn: 25,
+      buyIn: JASS.BUY_IN,
       fines: finesAmount,
       finesList: playerFinesList,
       rankFine,
-      total: 25 + finesAmount + rankFine,
+      total: JASS.BUY_IN + finesAmount + rankFine,
     };
   });
 
@@ -459,10 +441,9 @@ export default function Summary() {
           <div className="rounded-lg bg-muted p-3 text-sm">
             <div className="mb-1 font-medium">Rang-Bussen:</div>
             <div className="grid grid-cols-4 gap-2 text-muted-foreground">
-              <span>1. {formatCHF(0)}</span>
-              <span>2. {formatCHF(10)}</span>
-              <span>3. {formatCHF(15)}</span>
-              <span>4. {formatCHF(20)}</span>
+              {Object.entries(JASS.RANK_FINES).map(([rank, fine]) => (
+                <span key={rank}>{rank}. {formatCHF(fine)}</span>
+              ))}
             </div>
           </div>
         </CardContent>
@@ -502,24 +483,14 @@ export default function Summary() {
       </Card>
 
       {/* Actions */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Button 
-          size="lg" 
-          className="gap-2"
-          onClick={() => navigate('/dashboard')}
-        >
-          <CheckCircle className="h-5 w-5" />
-          Session abschliessen
-        </Button>
-        <Button 
-          size="lg" 
-          variant="outline" 
-          className="gap-2"
-        >
-          <Share2 className="h-5 w-5" />
-          Als PDF / Teilen
-        </Button>
-      </div>
+      <Button
+        size="lg"
+        className="w-full gap-2"
+        onClick={() => navigate('/dashboard')}
+      >
+        <CheckCircle className="h-5 w-5" />
+        Session abschliessen
+      </Button>
     </div>
   );
 }

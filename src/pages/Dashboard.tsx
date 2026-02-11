@@ -15,7 +15,7 @@ export default function Dashboard() {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('20:00');
   
-  const { data: settings, isLoading } = useAppSettings();
+  const { data: settings, isLoading, error } = useAppSettings();
   const updateNextDate = useUpdateNextDate();
 
   const nextDate = settings?.next_date ? new Date(settings.next_date) : null;
@@ -38,6 +38,14 @@ export default function Dashboard() {
       },
     });
   };
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+        Daten konnten nicht geladen werden. Bitte versuche es erneut.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
