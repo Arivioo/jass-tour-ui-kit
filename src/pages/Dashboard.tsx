@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Play, History, FileText, Trophy, Edit, Loader2 } from 'lucide-react';
+import { Calendar, Clock, Play, History, FileText, Trophy, Edit, Loader2, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useAppSettings, useUpdateNextDate } from '@/hooks/useAppSettings';
+import { useIncompleteSession, useDeleteSession } from '@/hooks/useSessions';
 import { useToast } from '@/hooks/use-toast';
+import { JASS } from '@/lib/constants';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -17,6 +19,8 @@ export default function Dashboard() {
   
   const { data: settings, isLoading, error } = useAppSettings();
   const updateNextDate = useUpdateNextDate();
+  const { data: incompleteSession } = useIncompleteSession();
+  const deleteSession = useDeleteSession();
 
   const nextDate = settings?.next_date ? new Date(settings.next_date) : null;
   const countdown = nextDate ? getCountdown(nextDate) : { days: 0, hours: 0, minutes: 0 };
@@ -54,6 +58,43 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-foreground">Willkommen</h1>
         <p className="text-muted-foreground">Bereit für den nächsten Jass-Abend?</p>
       </div>
+
+      {/* Incomplete Session Banner */}
+      {incompleteSession && (
+        <Card className="border-2 border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="font-semibold text-primary">Session in Arbeit</h3>
+                <p className="text-sm text-muted-foreground">
+                  {incompleteSession.completedMatches}/{JASS.MATCHES_PER_SESSION} Matches gespielt
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    deleteSession.mutate(incompleteSession.id, {
+                      onSuccess: () => toast({ title: 'Session abgebrochen' }),
+                    });
+                  }}
+                  disabled={deleteSession.isPending}
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/session', { state: { resumeSessionId: incompleteSession.id } })}
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Fortsetzen
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Next Date Card */}
       <Card className="overflow-hidden">
@@ -138,24 +179,34 @@ export default function Dashboard() {
 
       {/* Primary Actions */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <Button 
-          size="lg" 
+        <Button
+          size="lg"
           className="h-14 gap-2 text-base font-semibold shadow-md"
           onClick={() => navigate('/session')}
         >
           <Play className="h-5 w-5" />
           Neue Session starten
         </Button>
-        <Button 
-          size="lg" 
-          variant="outline" 
+        <Button
+          size="lg"
+          variant="outline"
           className="h-14 gap-2 text-base font-semibold"
-          onClick={() => navigate('/history')}
+          onClick={() => navigate('/lobby')}
         >
-          <History className="h-5 w-5" />
-          Vergangene Abende
+          <Users className="h-5 w-5" />
+          Gemeinsam spielen
         </Button>
       </div>
+
+      {/* Secondary Actions */}
+      <Button
+        variant="ghost"
+        className="w-full gap-2 text-muted-foreground"
+        onClick={() => navigate('/history')}
+      >
+        <History className="h-4 w-4" />
+        Vergangene Abende
+      </Button>
 
       {/* Quick Access */}
       <div className="grid gap-3 sm:grid-cols-2">

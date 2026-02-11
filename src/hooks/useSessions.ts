@@ -7,6 +7,7 @@ export interface SessionData {
   location: string;
   total_pot: number;
   is_completed: boolean;
+  losli_player_id: string | null;
   created_at: string;
 }
 
@@ -117,19 +118,25 @@ export function useCompleteSession() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ 
-      sessionId, 
+    mutationFn: async ({
+      sessionId,
       rankings,
-      totalPot 
-    }: { 
-      sessionId: string; 
+      totalPot,
+      losliPlayerId,
+    }: {
+      sessionId: string;
       rankings: { playerId: string; finalRank: number; totalWins: number; totalFines: number }[];
       totalPot: number;
+      losliPlayerId?: string;
     }) => {
       // Update session as completed
       const { error: sessionError } = await supabase
         .from('sessions')
-        .update({ is_completed: true, total_pot: totalPot })
+        .update({
+          is_completed: true,
+          total_pot: totalPot,
+          ...(losliPlayerId ? { losli_player_id: losliPlayerId } : {}),
+        })
         .eq('id', sessionId);
       
       if (sessionError) throw sessionError;
@@ -172,12 +179,12 @@ export function useCreateMatch() {
 
 export function useCreateMatchResults() {
   return useMutation({
-    mutationFn: async ({ 
-      matchId, 
-      results 
-    }: { 
-      matchId: string; 
-      results: { playerId: string; isWinner: boolean; fines: number }[] 
+    mutationFn: async ({
+      matchId,
+      results
+    }: {
+      matchId: string;
+      results: { playerId: string; isWinner: boolean; fines: number }[]
     }) => {
       const data = results.map(r => ({
         match_id: matchId,
@@ -185,13 +192,128 @@ export function useCreateMatchResults() {
         is_winner: r.isWinner,
         fines: r.fines,
       }));
-      
+
       const { error } = await supabase
         .from('match_results')
         .insert(data);
-      
+
       if (error) throw error;
     },
+  });
+}
+
+export function useCreateMatchFines() {
+  return useMutation({
+    mutationFn: async ({
+      matchId,
+      fines,
+    }: {
+      matchId: string;
+      fines: { playerId: string; fineType: string; amount: number; note?: string; roundNumber?: number }[];
+    }) => {
+      if (fines.length === 0) return;
+
+      const data = fines.map(f => ({
+        match_id: matchId,
+        player_id: f.playerId,
+        fine_type: f.fineType,
+        amount: f.amount,
+        note: f.note || null,
+        round_number: f.roundNumber || null,
+      }));
+
+      const { error } = await supabase
+        .from('match_fines')
+        .insert(data);
+
+      if (error) throw error;
+    },
+  });
+}
+
+export function useIncompleteSession() {
+  return useQuery({
+    queryKey: ['incomplete-session'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('is_completed', false)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      if (!data || data.length === 0) return null;
+
+      const session = data[0];
+
+      // Count completed matches
+      const { count, error: matchError } = await supabase
+        .from('matches')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', session.id);
+
+      if (matchError) throw matchError;
+
+      return {
+        ...session,
+        completedMatches: count || 0,
+      };
+    },
+  });
+}
+
+export function useDeleteSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['incomplete-session'] });
+    },
+  });
+}
+
+export function useResumeSessionData(sessionId: string | null) {
+  return useQuery({
+    queryKey: ['resume-session', sessionId],
+    queryFn: async () => {
+      if (!sessionId) throw new Error('No session ID');
+
+      // Load matches with results
+      const { data: matches, error: matchError } = await supabase
+        .from('matches')
+        .select('*, match_results(player_id, is_winner)')
+        .eq('session_id', sessionId)
+        .order('match_number', { ascending: true });
+
+      if (matchError) throw matchError;
+
+      // Build player wins map from completed matches
+      const playerWins: Record<string, number> = {};
+      (matches || []).forEach((match: { match_results: { player_id: string; is_winner: boolean }[] }) => {
+        match.match_results.forEach((r: { player_id: string; is_winner: boolean }) => {
+          if (r.is_winner) {
+            playerWins[r.player_id] = (playerWins[r.player_id] || 0) + 1;
+          }
+        });
+      });
+
+      return {
+        completedMatches: matches?.length || 0,
+        nextMatch: (matches?.length || 0) + 1,
+        playerWins,
+      };
+    },
+    enabled: !!sessionId,
   });
 }
 
@@ -204,9 +326,13 @@ export function useSessionsWithRankings() {
         .select('*')
         .eq('is_completed', true)
         .order('date', { ascending: false });
-      
+
       if (sessionsError) throw sessionsError;
-      
+
+      // Fetch all players for losli lookup
+      const { data: allPlayers } = await supabase.from('players').select('id, name');
+      const playerMap = new Map((allPlayers || []).map(p => [p.id, p.name]));
+
       const sessionsWithRankings = await Promise.all(
         (sessions || []).map(async (session) => {
           const { data: rankings, error: rankingsError } = await supabase
@@ -214,11 +340,14 @@ export function useSessionsWithRankings() {
             .select('*, players(name)')
             .eq('session_id', session.id)
             .order('final_rank', { ascending: true });
-          
+
           if (rankingsError) throw rankingsError;
-          
+
           return {
             ...session,
+            losliPlayerName: session.losli_player_id
+              ? playerMap.get(session.losli_player_id) || null
+              : null,
             players: (rankings || []).map((r: { players: { name: string } | null; final_rank: number; total_wins: number; total_fines: number }) => ({
               name: r.players?.name || 'Unknown',
               rank: r.final_rank,
@@ -229,7 +358,7 @@ export function useSessionsWithRankings() {
           };
         })
       );
-      
+
       return sessionsWithRankings;
     },
   });

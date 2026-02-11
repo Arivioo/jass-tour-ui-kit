@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Trophy, ChevronRight, Inbox, MapPin, Users, Medal, Loader2 } from 'lucide-react';
+import { Calendar, Trophy, ChevronRight, Inbox, MapPin, Users, Medal, Loader2, Gift, FileDown } from 'lucide-react';
 import { formatCHF } from '@/lib/players';
 import { JASS } from '@/lib/constants';
 import { useSessionsWithRankings } from '@/hooks/useSessions';
+import { exportSessionsCsv } from '@/lib/exportCsv';
 
 export default function History() {
   const navigate = useNavigate();
@@ -31,9 +32,28 @@ export default function History() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">Vergangene Abende</h1>
-        <p className="text-muted-foreground">Alle bisherigen Jass-Sessions</p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-foreground">Vergangene Abende</h1>
+          <p className="text-muted-foreground">Alle bisherigen Jass-Sessions</p>
+        </div>
+        {sessionList.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => exportSessionsCsv(sessionList.map(s => ({
+              date: s.date,
+              location: s.location,
+              winner: s.players[0]?.name || '',
+              totalPot: s.total_pot,
+              players: s.players,
+            })))}
+          >
+            <FileDown className="h-4 w-4" />
+            CSV
+          </Button>
+        )}
       </div>
 
       {/* Stats Summary */}
@@ -114,6 +134,7 @@ interface SessionWithRankings {
   date: string;
   location: string;
   total_pot: number;
+  losliPlayerName?: string | null;
   players: {
     name: string;
     rank: number;
@@ -184,6 +205,15 @@ function SessionCard({
               <span>{session.matchCount} Matches</span>
               <span>•</span>
               <span>Pot: {formatCHF(session.total_pot)}</span>
+              {session.losliPlayerName && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Gift className="h-3.5 w-3.5" />
+                    {session.losliPlayerName}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Rankings */}

@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Info, Loader2, TrendingUp, Calendar, Medal, Flame, Target, Frown, Crown, Snowflake, Award, Star, Sparkles } from 'lucide-react';
+import { Trophy, Info, Loader2, TrendingUp, Calendar, Medal, Flame, Target, Frown, Crown, Snowflake, Award, Star, Sparkles, FileDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { exportRankingsCsv } from '@/lib/exportCsv';
 
 interface PlayerStats {
   playerId: string;
@@ -142,9 +144,30 @@ export default function Rangliste() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">Ewige Rangliste</h1>
-        <p className="text-muted-foreground">2015–2026 • {totalSessionsAll} Abende</p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-foreground">Ewige Rangliste</h1>
+          <p className="text-muted-foreground">2015–2026 • {totalSessionsAll} Abende</p>
+        </div>
+        {rankings.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => exportRankingsCsv(rankings.map(r => ({
+              name: r.name,
+              sessions: r.totalSessions,
+              wins: r.rank1,
+              avgRank: r.totalSessions > 0
+                ? (r.rank1 * 1 + r.rank2 * 2 + r.rank3 * 3 + r.rank4 * 4) / r.totalSessions
+                : 0,
+              totalFines: 0,
+            })))}
+          >
+            <FileDown className="h-4 w-4" />
+            CSV
+          </Button>
+        )}
       </div>
 
       {/* Quick Stats */}

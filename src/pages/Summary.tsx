@@ -3,14 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trophy, CreditCard, Gift, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle, Calendar } from 'lucide-react';
+import { Trophy, CreditCard, Gift, CheckCircle, Medal, GripVertical, ArrowUp, ArrowDown, MapPin, AlertCircle, Calendar, Loader2, FileDown } from 'lucide-react';
 import { FINE_TYPES, formatCHF } from '@/lib/players';
 import { JASS } from '@/lib/constants';
 import { usePlayers } from '@/hooks/usePlayers';
+import { useCompleteSession } from '@/hooks/useSessions';
+import { useCreateKasseTransaction } from '@/hooks/useKasse';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { LuckyWheel } from '@/components/LuckyWheel';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { exportSessionPdf } from '@/lib/exportPdf';
 import type { Fine, RankingPlayer } from '@/types/jass';
 
 interface HistorySession {
@@ -39,6 +43,7 @@ interface LocationState {
     matchNumber?: number;
   }>;
   playerWins?: { [playerId: string]: number };
+  sessionId?: string;
   fromHistory?: boolean;
   historySession?: HistorySession;
 }
@@ -70,10 +75,14 @@ const PLACEHOLDER_SUMMARY = {
 export default function Summary() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const state = location.state as LocationState | undefined;
   const { data: players = [] } = usePlayers();
+  const completeSession = useCompleteSession();
+  const createKasseTransaction = useCreateKasseTransaction();
   const [leftFirst, setLeftFirst] = useState('');
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [showTiebreaker, setShowTiebreaker] = useState(false);
   const [tieGroups, setTieGroups] = useState<Array<{
     wins: number;
@@ -482,14 +491,87 @@ export default function Summary() {
         </CardContent>
       </Card>
 
+      {/* Export */}
+      <Button
+        variant="outline"
+        size="lg"
+        className="w-full gap-2"
+        onClick={() => {
+          const dateStr = format(sessionDate, "d. MMMM yyyy", { locale: de });
+          exportSessionPdf({
+            date: dateStr,
+            location: sessionLocation,
+            rankings,
+            payments: payments.map(p => ({
+              name: p.name,
+              buyIn: p.buyIn,
+              fines: p.fines,
+              rankFine: p.rankFine,
+              total: p.total,
+            })),
+            losliPlayerName: leftFirst ? players.find(p => p.id === leftFirst)?.name : undefined,
+          });
+        }}
+      >
+        <FileDown className="h-5 w-5" />
+        PDF exportieren
+      </Button>
+
       {/* Actions */}
       <Button
         size="lg"
         className="w-full gap-2"
-        onClick={() => navigate('/dashboard')}
+        disabled={isCompleting || showTiebreaker}
+        onClick={async () => {
+          const sid = state?.sessionId;
+          if (!sid) {
+            // No session ID (placeholder or history view) — just navigate
+            navigate('/dashboard');
+            return;
+          }
+
+          setIsCompleting(true);
+          try {
+            const totalPot = payments.reduce((sum, p) => sum + p.total, 0);
+            await completeSession.mutateAsync({
+              sessionId: sid,
+              rankings: rankings.map(r => ({
+                playerId: r.playerId,
+                finalRank: r.rank,
+                totalWins: r.wins,
+                totalFines: playerFines[r.playerId] || 0,
+              })),
+              totalPot,
+              losliPlayerId: leftFirst || undefined,
+            });
+            // Auto-insert kasse transactions for each player's payment
+            for (const p of payments) {
+              try {
+                await createKasseTransaction.mutateAsync({
+                  sessionId: sid,
+                  playerId: p.playerId,
+                  transactionType: 'session_pot',
+                  amount: p.total,
+                  note: `Session ${format(sessionDate, 'd.M.yyyy')}`,
+                });
+              } catch {
+                // Non-critical — continue with other players
+              }
+            }
+            toast({ title: 'Session gespeichert!' });
+            navigate('/dashboard');
+          } catch {
+            toast({ variant: 'destructive', title: 'Session konnte nicht abgeschlossen werden.' });
+            setIsCompleting(false);
+          }
+        }}
       >
-        <CheckCircle className="h-5 w-5" />
-        Session abschliessen
+        {isCompleting ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <CheckCircle className="h-5 w-5" />
+        )}
+        {isCompleting ? 'Speichern...' : 'Session abschliessen'}
       </Button>
     </div>
   );

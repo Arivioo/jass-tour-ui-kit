@@ -35,6 +35,99 @@ export type Database = {
         }
         Relationships: []
       }
+      kasse_transactions: {
+        Row: {
+          id: string
+          session_id: string | null
+          player_id: string | null
+          transaction_type: string
+          amount: number
+          note: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id?: string | null
+          player_id?: string | null
+          transaction_type: string
+          amount: number
+          note?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string | null
+          player_id?: string | null
+          transaction_type?: string
+          amount?: number
+          note?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kasse_transactions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kasse_transactions_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_fines: {
+        Row: {
+          id: string
+          match_id: string
+          player_id: string
+          fine_type: string
+          amount: number
+          note: string | null
+          round_number: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          match_id: string
+          player_id: string
+          fine_type: string
+          amount: number
+          note?: string | null
+          round_number?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          match_id?: string
+          player_id?: string
+          fine_type?: string
+          amount?: number
+          note?: string | null
+          round_number?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_fines_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_fines_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_results: {
         Row: {
           created_at: string
@@ -204,6 +297,7 @@ export type Database = {
           id: string
           is_completed: boolean
           location: string
+          losli_player_id: string | null
           total_pot: number
           updated_at: string
         }
@@ -214,6 +308,7 @@ export type Database = {
           id?: string
           is_completed?: boolean
           location: string
+          losli_player_id?: string | null
           total_pot?: number
           updated_at?: string
         }
@@ -224,6 +319,7 @@ export type Database = {
           id?: string
           is_completed?: boolean
           location?: string
+          losli_player_id?: string | null
           total_pot?: number
           updated_at?: string
         }

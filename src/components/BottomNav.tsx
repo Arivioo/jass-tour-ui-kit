@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Play, History, Trophy, Settings } from 'lucide-react';
+import { Home, Play, History, Trophy, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -7,7 +7,7 @@ const navItems = [
   { to: '/session', icon: Play, label: 'Session' },
   { to: '/history', icon: History, label: 'Abende' },
   { to: '/rangliste', icon: Trophy, label: 'Rangliste' },
-  { to: '/settings', icon: Settings, label: 'Mehr' },
+  { to: '/kasse', icon: Wallet, label: 'Kasse' },
 ];
 
 export function BottomNav() {

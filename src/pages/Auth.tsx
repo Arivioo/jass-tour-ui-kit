@@ -3,19 +3,39 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Spade, Lock } from 'lucide-react';
+import { usePlayers } from '@/hooks/usePlayers';
+import { Spade, Lock, Mail, User, Loader2 } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { data: players = [] } = usePlayers();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Shared password state
+  const [password, setPassword] = useState('');
+  const [pwError, setPwError] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+
+  // Login state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Signup state
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupPlayer, setSignupPlayer] = useState('');
+  const [signupError, setSignupError] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
+
+  const handleSharedPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(false);
+    setPwLoading(true);
+    setPwError(false);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('verify-jass-password', {
@@ -23,18 +43,78 @@ export default function Auth() {
       });
 
       if (fnError || !data?.valid) {
-        setError(true);
+        setPwError(true);
         setPassword('');
       } else {
         sessionStorage.setItem('jass-access', 'granted');
         navigate('/');
       }
     } catch {
-      setError(true);
+      setPwError(true);
       setPassword('');
     } finally {
-      setLoading(false);
+      setPwLoading(false);
     }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError('');
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+
+    if (error) {
+      setLoginError('E-Mail oder Passwort falsch');
+    } else {
+      sessionStorage.setItem('jass-access', 'granted');
+      navigate('/');
+    }
+    setLoginLoading(false);
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupLoading(true);
+    setSignupError('');
+
+    if (!signupPlayer) {
+      setSignupError('Bitte wähle deinen Spieler');
+      setSignupLoading(false);
+      return;
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: signupEmail,
+      password: signupPassword,
+    });
+
+    if (authError) {
+      setSignupError(authError.message);
+      setSignupLoading(false);
+      return;
+    }
+
+    // Link player to user
+    if (authData.user) {
+      const { error: linkError } = await supabase
+        .from('players')
+        .update({ user_id: authData.user.id })
+        .eq('id', signupPlayer)
+        .is('user_id', null);
+
+      if (linkError) {
+        setSignupError('Spieler konnte nicht verknüpft werden. Vielleicht schon vergeben?');
+        setSignupLoading(false);
+        return;
+      }
+    }
+
+    setSignupSuccess(true);
+    setSignupLoading(false);
   };
 
   return (
@@ -45,36 +125,139 @@ export default function Auth() {
             <Spade className="h-8 w-8 text-primary" />
           </div>
           <CardTitle className="text-2xl">Beize Jass Tour</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Gib das Passwort ein, um fortzufahren
-          </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Passwort"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError(false);
-                }}
-                className={`pl-10 ${error ? 'border-destructive' : ''}`}
-                autoFocus
-                disabled={loading}
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-destructive text-center">
-                Falsches Passwort
-              </p>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Prüfe...' : 'Eintreten'}
-            </Button>
-          </form>
+          <Tabs defaultValue="password">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="password">Passwort</TabsTrigger>
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="signup">Registrieren</TabsTrigger>
+            </TabsList>
+
+            {/* Shared Password Tab */}
+            <TabsContent value="password">
+              <form onSubmit={handleSharedPassword} className="space-y-4 mt-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  Gib das gemeinsame Passwort ein
+                </p>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    placeholder="Passwort"
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setPwError(false); }}
+                    className={`pl-10 ${pwError ? 'border-destructive' : ''}`}
+                    autoFocus
+                    disabled={pwLoading}
+                  />
+                </div>
+                {pwError && (
+                  <p className="text-sm text-destructive text-center">Falsches Passwort</p>
+                )}
+                <Button type="submit" className="w-full" disabled={pwLoading}>
+                  {pwLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Eintreten
+                </Button>
+              </form>
+            </TabsContent>
+
+            {/* Login Tab */}
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-4 mt-4">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="E-Mail"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    className="pl-10"
+                    disabled={loginLoading}
+                  />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    placeholder="Passwort"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="pl-10"
+                    disabled={loginLoading}
+                  />
+                </div>
+                {loginError && (
+                  <p className="text-sm text-destructive text-center">{loginError}</p>
+                )}
+                <Button type="submit" className="w-full" disabled={loginLoading}>
+                  {loginLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Anmelden
+                </Button>
+              </form>
+            </TabsContent>
+
+            {/* Signup Tab */}
+            <TabsContent value="signup">
+              {signupSuccess ? (
+                <div className="text-center py-6 space-y-2">
+                  <p className="text-lg font-semibold text-primary">Registrierung erfolgreich!</p>
+                  <p className="text-sm text-muted-foreground">
+                    Prüfe deine E-Mail für den Bestätigungslink.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSignup} className="space-y-4 mt-4">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      placeholder="E-Mail"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      className="pl-10"
+                      disabled={signupLoading}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      placeholder="Passwort (min. 6 Zeichen)"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      className="pl-10"
+                      minLength={6}
+                      disabled={signupLoading}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <User className="h-4 w-4" />
+                      Ich bin...
+                    </label>
+                    <Select value={signupPlayer} onValueChange={setSignupPlayer}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Spieler wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {players.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {signupError && (
+                    <p className="text-sm text-destructive text-center">{signupError}</p>
+                  )}
+                  <Button type="submit" className="w-full" disabled={signupLoading}>
+                    {signupLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Registrieren
+                  </Button>
+                </form>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Play, History, Trophy, FileText, Settings, LogOut } from 'lucide-react';
+import { Home, Play, History, Trophy, FileText, Settings, LogOut, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/session', icon: Play, label: 'Neue Session' },
   { to: '/history', icon: History, label: 'Vergangene Abende' },
   { to: '/rangliste', icon: Trophy, label: 'Ewige Rangliste' },
+  { to: '/kasse', icon: Wallet, label: 'Kasse' },
   { to: '/statuten', icon: FileText, label: 'Statuten' },
   { to: '/settings', icon: Settings, label: 'Einstellungen' },
 ];

@@ -13,6 +13,8 @@ const History = lazy(() => import("./pages/History"));
 const Summary = lazy(() => import("./pages/Summary"));
 const Rangliste = lazy(() => import("./pages/Rangliste"));
 const Statuten = lazy(() => import("./pages/Statuten"));
+const Kasse = lazy(() => import("./pages/Kasse"));
+const SessionLobby = lazy(() => import("./pages/SessionLobby"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -42,7 +44,9 @@ const App = () => (
               <Route path="/summary" element={<Summary />} />
               <Route path="/summary/:id" element={<Summary />} />
               <Route path="/rangliste" element={<Rangliste />} />
+              <Route path="/kasse" element={<Kasse />} />
               <Route path="/statuten" element={<Statuten />} />
+              <Route path="/lobby" element={<SessionLobby />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>
