@@ -29,8 +29,6 @@ IMMEDIATELY after implementing any front-end change:
 6. **Capture evidence** — Take full-page screenshot at desktop viewport (1440px) of each changed view
 7. **Check for errors** — Run `mcp__playwright__browser_console_messages` and fix any errors before reporting completion
 
-This verification ensures changes meet design standards and user requirements.
-
 ### Comprehensive Design Review
 Invoke the `@design-review` agent for thorough design validation when:
 - Completing significant UI/UX features
