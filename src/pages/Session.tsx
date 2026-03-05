@@ -48,7 +48,7 @@ export default function Session() {
   const [location, setLocation] = useState<string>('');
   const [customLocation, setCustomLocation] = useState<string>('');
   const [playersInitialized, setPlayersInitialized] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [_isSaving, setIsSaving] = useState(false);
   const [resumeApplied, setResumeApplied] = useState(false);
   const savingRef = useRef(false);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);

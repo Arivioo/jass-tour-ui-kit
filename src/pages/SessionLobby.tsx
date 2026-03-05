@@ -14,7 +14,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 export default function SessionLobby() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: players = [] } = usePlayers();
+  const { data: _players = [] } = usePlayers();
   const createSession = useCreateSession();
   const [mode, setMode] = useState<'choose' | 'host' | 'join'>('choose');
   const [joinCode, setJoinCode] = useState('');
