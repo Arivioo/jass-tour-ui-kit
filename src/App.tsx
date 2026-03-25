@@ -6,6 +6,7 @@ import { Layout } from "./components/Layout";
 import { Loader2 } from "lucide-react";
 import Auth from "./pages/Auth";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { PasswordGate } from "./components/shared/PasswordGate";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Session = lazy(() => import("./pages/Session"));
@@ -29,32 +30,34 @@ function PageLoader() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Navigate to="/" replace />} />
-              <Route path="/session" element={<Session />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/summary" element={<Summary />} />
-              <Route path="/summary/:id" element={<Summary />} />
-              <Route path="/rangliste" element={<Rangliste />} />
-              <Route path="/kasse" element={<Kasse />} />
-              <Route path="/statuten" element={<Statuten />} />
-              <Route path="/lobby" element={<SessionLobby />} />
-              <Route path="/settings" element={<Settings />} />
+  <PasswordGate>
+    <QueryClientProvider client={queryClient}>
+      <Toaster />
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Navigate to="/" replace />} />
+                <Route path="/session" element={<Session />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/summary" element={<Summary />} />
+                <Route path="/summary/:id" element={<Summary />} />
+                <Route path="/rangliste" element={<Rangliste />} />
+                <Route path="/kasse" element={<Kasse />} />
+                <Route path="/statuten" element={<Statuten />} />
+                <Route path="/lobby" element={<SessionLobby />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
-  </QueryClientProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </PasswordGate>
 );
 
 export default App;
