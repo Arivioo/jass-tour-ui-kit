@@ -89,7 +89,7 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
       setRemainingInGroup([...tieGroups[0].players]);
       setCurrentRankInGroup(tieGroups[0].startRank);
     }
-  }, [tieGroups]);
+  }, [tieGroups, remainingInGroup.length]);
 
   const currentGroup = tieGroups[currentGroupIndex];
   const segmentAngle = remainingInGroup.length > 0 ? 360 / remainingInGroup.length : 360;
@@ -185,7 +185,7 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
         {/* Resolved tie groups */}
         {resolvedGroups.map((group, idx) => (
           <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-2">
-            <Check className="h-4 w-4 text-green-600" />
+            <Check className="h-4 w-4 text-success" aria-hidden="true" />
             <span>Gleichstand bei {group.wins} {group.wins === 1 ? 'Sieg' : 'Siegen'} aufgelöst</span>
           </div>
         ))}
@@ -193,7 +193,7 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
         {/* Current group indicator */}
         {currentGroup && (
           <div className="flex items-center gap-2 text-sm font-medium bg-primary/10 rounded-lg p-3">
-            <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+            <Sparkles className="h-4 w-4 text-primary animate-pulse" aria-hidden="true" />
             <span>
               Gleichstand bei {currentGroup.wins} {currentGroup.wins === 1 ? 'Sieg' : 'Siegen'}: 
               Plätze {currentGroup.startRank}–{currentGroup.startRank + currentGroup.players.length - 1}
@@ -222,7 +222,7 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
                 key={player.playerId}
                 className="flex items-center gap-2 rounded-full bg-green-100 text-green-800 px-3 py-1 text-sm font-medium"
               >
-                <Trophy className="h-3 w-3" />
+                <Trophy className="h-3 w-3" aria-hidden="true" />
                 <span>{player.rank}. {player.name}</span>
               </div>
             ))}
@@ -242,6 +242,7 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
             width={wheelSize}
             height={wheelSize}
             className="drop-shadow-xl"
+            aria-hidden="true"
             style={{
               transform: `rotate(${rotation}deg)`,
               transition: isSpinning ? 'transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
@@ -280,12 +281,14 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
                     dominantBaseline="middle"
                     className="text-sm font-bold"
                     fill="white"
+                    textLength={radius * 0.7}
+                    lengthAdjust="spacingAndGlyphs"
                     style={{
                       transform: `rotate(${textPos.rotation}deg)`,
                       transformOrigin: `${textPos.x}px ${textPos.y}px`,
                     }}
                   >
-                    {player.name}
+                    {player.name.length > 8 ? player.name.slice(0, 8) + '\u2026' : player.name}
                   </text>
                 </g>
               );
@@ -334,7 +337,7 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
             isSpinning && "animate-pulse"
           )}
         >
-          <Sparkles className={cn("h-5 w-5", isSpinning && "animate-spin")} />
+          <Sparkles className={cn("h-5 w-5", isSpinning && "animate-spin")} aria-hidden="true" />
           {isSpinning 
             ? 'Dreht...' 
             : `Platz ${currentRankInGroup} auslosen!`
@@ -344,7 +347,7 @@ export function LuckyWheel({ tieGroups, onComplete, allPlayers }: LuckyWheelProp
 
       {/* Remaining info */}
       {remainingInGroup.length > 1 && !showResult && !isSpinning && (
-        <p className="text-xs text-muted-foreground text-center">
+        <p className="text-xs text-muted-foreground text-center break-words max-w-full">
           Noch zu vergeben: {remainingInGroup.map(p => p.name).join(' vs ')}
         </p>
       )}

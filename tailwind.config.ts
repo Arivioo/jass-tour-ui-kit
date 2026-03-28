@@ -58,6 +58,26 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        "rank-gold": {
+          DEFAULT: "hsl(var(--rank-gold))",
+          foreground: "hsl(var(--rank-gold-foreground))",
+        },
+        "rank-silver": {
+          DEFAULT: "hsl(var(--rank-silver))",
+          foreground: "hsl(var(--rank-silver-foreground))",
+        },
+        "rank-bronze": {
+          DEFAULT: "hsl(var(--rank-bronze))",
+          foreground: "hsl(var(--rank-bronze-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

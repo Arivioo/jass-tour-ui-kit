@@ -56,7 +56,7 @@ export default defineConfig({
           vendor: ["react", "react-dom", "react-router-dom"],
           query: ["@tanstack/react-query"],
           supabase: ["@supabase/supabase-js"],
-          ui: ["@radix-ui/react-dialog", "@radix-ui/react-select", "@radix-ui/react-switch", "@radix-ui/react-tabs", "@radix-ui/react-toast"],
+          ui: ["@radix-ui/react-dialog", "@radix-ui/react-label", "@radix-ui/react-select", "@radix-ui/react-slot", "@radix-ui/react-switch", "@radix-ui/react-tabs", "@radix-ui/react-toast"],
         },
       },
     },

@@ -41,24 +41,24 @@ export function PasswordGate({ children }: { children: ReactNode }) {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Beize Jass Tour</CardTitle>
-          <CardDescription>This app is in private beta.</CardDescription>
+          <CardDescription>Diese App ist in der privaten Betaphase.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
               type="password"
-              placeholder="Enter access code"
+              placeholder="Zugangscode eingeben"
+              aria-label="Zugangscode"
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(false) }}
               autoFocus
             />
-            {error && <p className="text-sm text-destructive">Incorrect access code.</p>}
+            {error && <p className="text-sm text-destructive" role="alert">Falscher Zugangscode.</p>}
             <Button
               type="submit"
               className="w-full"
-              style={{ backgroundColor: '#E53935' }}
             >
-              Enter
+              Eintreten
             </Button>
           </form>
         </CardContent>

@@ -20,14 +20,14 @@ export function BottomNav() {
           end={item.to === '/'}
           className={({ isActive }) =>
             cn(
-              'flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+              'flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
               isActive
-                ? 'text-primary'
+                ? 'text-primary relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-0.5 after:w-4 after:rounded-full after:bg-primary'
                 : 'text-muted-foreground hover:text-foreground'
             )
           }
         >
-          <item.icon className="h-5 w-5" />
+          <item.icon className="h-5 w-5" aria-hidden="true" />
           <span>{item.label}</span>
         </NavLink>
       ))}

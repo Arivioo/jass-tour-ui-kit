@@ -23,8 +23,9 @@ const queryClient = new QueryClient();
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center py-12">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+      <span className="sr-only">Seite wird geladen…</span>
     </div>
   );
 }

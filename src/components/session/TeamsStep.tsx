@@ -42,7 +42,7 @@ export function TeamsStep({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-primary" />
+          <Trophy className="h-5 w-5 text-primary" aria-hidden="true" />
           Teams wählen (Match {matchNumber})
         </CardTitle>
       </CardHeader>
@@ -50,7 +50,7 @@ export function TeamsStep({
         {/* Location Selection */}
         <div className="space-y-2">
           <label className="text-sm font-medium flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-primary" />
+            <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
             Location
           </label>
           <Select value={location} onValueChange={onLocationChange}>
@@ -68,6 +68,7 @@ export function TeamsStep({
           {location === 'custom' && (
             <Input
               placeholder="Location eingeben..."
+              aria-label="Eigene Location"
               value={customLocation}
               onChange={(e) => onCustomLocationChange(e.target.value)}
             />
@@ -138,7 +139,7 @@ export function TeamsStep({
             className="gap-2"
             onClick={onPrev}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Zurück
           </Button>
           <Button
@@ -147,7 +148,7 @@ export function TeamsStep({
             disabled={teamA.length < 2 || teamB.length < 2 || !location || (location === 'custom' && !customLocation)}
           >
             Weiter
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </CardContent>

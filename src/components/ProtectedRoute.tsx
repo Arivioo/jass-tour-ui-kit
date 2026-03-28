@@ -27,8 +27,9 @@ export default function ProtectedRoute() {
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-screen items-center justify-center" role="status" aria-live="polite">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">Zugriff wird geprüft…</span>
       </div>
     );
   }

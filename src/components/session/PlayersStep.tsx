@@ -16,7 +16,7 @@ export function PlayersStep({ players, active, onToggle, onNext }: PlayersStepPr
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
+          <Users className="h-5 w-5 text-primary" aria-hidden="true" />
           Spieler heute
         </CardTitle>
       </CardHeader>
@@ -36,6 +36,7 @@ export function PlayersStep({ players, active, onToggle, onNext }: PlayersStepPr
               <Switch
                 checked={active.includes(player.id)}
                 onCheckedChange={() => onToggle(player.id)}
+                aria-label={`${player.name} auswählen`}
               />
             </div>
           ))}
@@ -46,7 +47,7 @@ export function PlayersStep({ players, active, onToggle, onNext }: PlayersStepPr
           disabled={active.length < 2}
         >
           Weiter
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </Button>
       </CardContent>
     </Card>

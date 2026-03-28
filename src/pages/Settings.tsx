@@ -6,8 +6,10 @@ import { Users, Calendar, Plus, Pencil, Trash2, Save, Loader2 } from 'lucide-rea
 import { usePlayers, useUpdatePlayer, useAddPlayer, useDeletePlayer } from '@/hooks/usePlayers';
 import { useAppSettings, useUpdateNextDate } from '@/hooks/useAppSettings';
 import { useToast } from '@/hooks/use-toast';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function Settings() {
+  usePageTitle('Einstellungen');
   const { toast } = useToast();
   const { data: players = [], isLoading: playersLoading } = usePlayers();
   const { data: settings, isLoading: settingsLoading } = useAppSettings();
@@ -102,8 +104,9 @@ export default function Settings() {
 
   if (playersLoading || settingsLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">Daten werden geladen…</span>
       </div>
     );
   }
@@ -120,7 +123,7 @@ export default function Settings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
+            <Users className="h-5 w-5 text-primary" aria-hidden="true" />
             Spieler verwalten
           </CardTitle>
         </CardHeader>
@@ -142,6 +145,7 @@ export default function Settings() {
                     onChange={(e) => setEditName(e.target.value)}
                     className="flex-1"
                     autoFocus
+                    aria-label="Spielername bearbeiten"
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
                   />
                 ) : (
@@ -153,34 +157,37 @@ export default function Settings() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-primary"
+                      className="text-primary"
                       onClick={handleSaveEdit}
                       disabled={updatePlayer.isPending}
+                      aria-label="Speichern"
                     >
                       {updatePlayer.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                       ) : (
-                        <Save className="h-4 w-4" />
+                        <Save className="h-4 w-4" aria-hidden="true" />
                       )}
                     </Button>
                   ) : (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground"
+                      className="text-muted-foreground"
                       onClick={() => handleStartEdit(player.id, player.name)}
+                      aria-label={`${player.name} bearbeiten`}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="text-muted-foreground hover:text-destructive"
                     onClick={() => handleRemovePlayer(player.id)}
                     disabled={deletePlayer.isPending}
+                    aria-label={`${player.name} entfernen`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -194,19 +201,21 @@ export default function Settings() {
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddPlayer()}
+              aria-label="Name des neuen Spielers"
             />
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="shrink-0 gap-2"
               onClick={handleAddPlayer}
               disabled={!newPlayerName.trim() || addPlayer.isPending}
             >
               {addPlayer.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4" aria-hidden="true" />
               )}
-              Hinzufügen
+              <span className="hidden sm:inline">Hinzufügen</span>
+              <span className="sr-only sm:hidden">Hinzufügen</span>
             </Button>
           </div>
         </CardContent>
@@ -216,7 +225,7 @@ export default function Settings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
+            <Calendar className="h-5 w-5 text-primary" aria-hidden="true" />
             Nächster Termin
           </CardTitle>
         </CardHeader>
@@ -235,17 +244,19 @@ export default function Settings() {
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Datum</label>
-              <Input 
-                type="date" 
+              <label htmlFor="settings-date" className="text-sm font-medium">Datum</label>
+              <Input
+                id="settings-date"
+                type="date"
                 value={nextDate}
                 onChange={(e) => setNextDate(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Zeit</label>
-              <Input 
-                type="time" 
+              <label htmlFor="settings-time" className="text-sm font-medium">Zeit</label>
+              <Input
+                id="settings-time"
+                type="time"
                 value={nextTime}
                 onChange={(e) => setNextTime(e.target.value)}
               />
@@ -257,9 +268,9 @@ export default function Settings() {
             disabled={!nextDate || updateNextDate.isPending}
           >
             {updateNextDate.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4" aria-hidden="true" />
             )}
             Speichern
           </Button>

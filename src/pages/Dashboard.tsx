@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, Play, History, FileText, Trophy, Edit, Loader2, Users } from 'lucide-react';
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { JASS } from '@/lib/constants';
 
 export default function Dashboard() {
+  usePageTitle('Dashboard');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
@@ -45,14 +47,14 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive" role="alert">
         Daten konnten nicht geladen werden. Bitte versuche es erneut.
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">Willkommen</h1>
@@ -63,9 +65,9 @@ export default function Dashboard() {
       {incompleteSession && (
         <Card className="border-2 border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex-1">
-                <h3 className="font-semibold text-primary">Session in Arbeit</h3>
+                <h2 className="font-semibold text-primary">Session in Arbeit</h2>
                 <p className="text-sm text-muted-foreground">
                   {incompleteSession.completedMatches}/{JASS.MATCHES_PER_SESSION} Matches gespielt
                 </p>
@@ -85,9 +87,10 @@ export default function Dashboard() {
                 </Button>
                 <Button
                   size="sm"
+                  className="flex-1 sm:flex-initial"
                   onClick={() => navigate('/session', { state: { resumeSessionId: incompleteSession.id } })}
                 >
-                  <Play className="h-4 w-4 mr-1" />
+                  <Play className="h-4 w-4 mr-1" aria-hidden="true" />
                   Fortsetzen
                 </Button>
               </div>
@@ -101,13 +104,13 @@ export default function Dashboard() {
         <CardHeader className="bg-primary/5 pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-primary" />
+              <Calendar className="h-5 w-5 text-primary" aria-hidden="true" />
               Nächster Termin
             </CardTitle>
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground">
-                  <Edit className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                  <Edit className="h-4 w-4" aria-hidden="true" />
                   Bearbeiten
                 </Button>
               </DialogTrigger>
@@ -117,27 +120,29 @@ export default function Dashboard() {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Datum</label>
-                    <Input 
-                      type="date" 
+                    <label htmlFor="edit-date" className="text-sm font-medium">Datum</label>
+                    <Input
+                      id="edit-date"
+                      type="date"
                       value={newDate}
                       onChange={(e) => setNewDate(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Zeit</label>
-                    <Input 
-                      type="time" 
+                    <label htmlFor="edit-time" className="text-sm font-medium">Zeit</label>
+                    <Input
+                      id="edit-time"
+                      type="time"
                       value={newTime}
                       onChange={(e) => setNewTime(e.target.value)}
                     />
                   </div>
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     onClick={handleSaveDate}
                     disabled={!newDate || updateNextDate.isPending}
                   >
-                    {updateNextDate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {updateNextDate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
                     Speichern
                   </Button>
                 </div>
@@ -147,13 +152,14 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent className="pt-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="flex items-center justify-center py-8" role="status" aria-live="polite">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden="true" />
+              <span className="sr-only">Daten werden geladen…</span>
             </div>
           ) : nextDate ? (
             <>
-              <div className="mb-4 flex items-center gap-2 text-lg font-medium">
-                <Clock className="h-5 w-5 text-muted-foreground" />
+              <div className="mb-4 flex flex-wrap items-center gap-2 text-base font-medium sm:text-lg">
+                <Clock className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 {nextDate.toLocaleDateString('de-CH', { 
                   weekday: 'long', 
                   day: 'numeric', 
@@ -184,7 +190,7 @@ export default function Dashboard() {
           className="h-14 gap-2 text-base font-semibold shadow-md"
           onClick={() => navigate('/session')}
         >
-          <Play className="h-5 w-5" />
+          <Play className="h-5 w-5" aria-hidden="true" />
           Neue Session starten
         </Button>
         <Button
@@ -193,18 +199,18 @@ export default function Dashboard() {
           className="h-14 gap-2 text-base font-semibold"
           onClick={() => navigate('/lobby')}
         >
-          <Users className="h-5 w-5" />
+          <Users className="h-5 w-5" aria-hidden="true" />
           Gemeinsam spielen
         </Button>
       </div>
 
       {/* Secondary Actions */}
       <Button
-        variant="ghost"
+        variant="outline"
         className="w-full gap-2 text-muted-foreground"
         onClick={() => navigate('/history')}
       >
-        <History className="h-4 w-4" />
+        <History className="h-4 w-4" aria-hidden="true" />
         Vergangene Abende
       </Button>
 
@@ -248,16 +254,19 @@ function QuickAccessCard({
   onClick: () => void;
 }) {
   return (
-    <Card 
-      className="cursor-pointer transition-shadow hover:shadow-md" 
+    <Card
+      className="cursor-pointer transition-shadow hover:shadow-md"
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
     >
       <CardContent className="flex items-center gap-4 p-4">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Icon className="h-6 w-6 text-primary" />
+          <Icon className="h-6 w-6 text-primary" aria-hidden="true" />
         </div>
         <div>
-          <h3 className="font-semibold">{title}</h3>
+          <h2 className="font-semibold">{title}</h2>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </CardContent>

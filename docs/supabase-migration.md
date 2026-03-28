@@ -8,14 +8,14 @@ Moved the Supabase project from a separate personal account to the same account/
 ## Old Project
 - **Project ID:** `xvnmzdxdhecnsxjdtbva`
 - **URL:** `https://xvnmzdxdhecnsxjdtbva.supabase.co`
-- **Anon Key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bm16ZHhkaGVjbnN4amR0YnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MTE2NDEsImV4cCI6MjA4NjM4NzY0MX0.G81M3348-b95qih-EwrHAKjseNz0Lh38KD2d33tC46I`
+- **Anon Key:** (redacted -- old project, to be deleted)
 - **Organization:** YouTube Migration (FREE tier, separate account)
 - **Status:** TO BE DELETED after migration is verified
 
 ## New Project
 - **Project ID:** `dkxdlovwzsxnepoteebk`
 - **URL:** `https://dkxdlovwzsxnepoteebk.supabase.co`
-- **Publishable Key:** `sb_publishable_9RAQoEYJz6TuSOW9Z5E52g_vd7EmU1a`
+- **Publishable Key:** (see .env or GitHub Actions secrets)
 - **Direct DB Connection:** `postgresql://postgres:[PASSWORD]@db.dkxdlovwzsxnepoteebk.supabase.co:5432/postgres`
 - **Organization:** Same as API project
 
@@ -67,7 +67,7 @@ Run in the [SQL Editor](https://supabase.com/dashboard/project/dkxdlovwzsxnepote
 ### 3. Update GitHub Actions Secrets
 At [Repository Secrets](https://github.com/Arivioo/jass-tour-ui-kit/settings/secrets/actions):
 - `SUPABASE_URL` → `https://dkxdlovwzsxnepoteebk.supabase.co`
-- `SUPABASE_ANON_KEY` → `sb_publishable_9RAQoEYJz6TuSOW9Z5E52g_vd7EmU1a`
+- `SUPABASE_ANON_KEY` → (see .env or GitHub Actions secrets)
 
 ### 4. Migrate Data (if any)
 Export from old project's [Table Editor](https://supabase.com/dashboard/project/xvnmzdxdhecnsxjdtbva/editor) as CSV and import into the new project.

@@ -8,8 +8,10 @@ import { usePlayers } from '@/hooks/usePlayers';
 import { useKasseTransactions, useKasseBalance, useCreateKasseTransaction } from '@/hooks/useKasse';
 import { useToast } from '@/hooks/use-toast';
 import { formatCHF } from '@/lib/players';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function Kasse() {
+  usePageTitle('Kasse');
   const { toast } = useToast();
   const { data: players = [] } = usePlayers();
   const { data: transactions = [], isLoading, error } = useKasseTransactions();
@@ -53,7 +55,7 @@ export default function Kasse() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive" role="alert">
         Daten konnten nicht geladen werden. Bitte versuche es erneut.
       </div>
     );
@@ -61,8 +63,9 @@ export default function Kasse() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">Daten werden geladen…</span>
       </div>
     );
   }
@@ -77,8 +80,8 @@ export default function Kasse() {
 
       {/* Balance */}
       <Card className="bg-gradient-to-r from-primary/5 to-primary/10">
-        <CardContent className="p-6 text-center">
-          <Wallet className="h-8 w-8 text-primary mx-auto mb-2" />
+        <CardContent className="p-4 text-center sm:p-6">
+          <Wallet className="h-8 w-8 text-primary mx-auto mb-2" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">Aktueller Saldo</p>
           <p className={`text-3xl font-bold ${balance >= 0 ? 'text-primary' : 'text-destructive'}`}>
             {formatCHF(balance)}
@@ -90,16 +93,16 @@ export default function Kasse() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Plus className="h-5 w-5 text-primary" />
+            <Plus className="h-5 w-5 text-primary" aria-hidden="true" />
             Neue Transaktion
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Typ</label>
+              <label htmlFor="kasse-typ" className="text-sm font-medium">Typ</label>
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger>
+                <SelectTrigger id="kasse-typ">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -109,8 +112,9 @@ export default function Kasse() {
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Betrag (CHF)</label>
+              <label htmlFor="kasse-betrag" className="text-sm font-medium">Betrag (CHF)</label>
               <Input
+                id="kasse-betrag"
                 type="number"
                 min="1"
                 value={amount}
@@ -120,9 +124,9 @@ export default function Kasse() {
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">Spieler (optional)</label>
+            <label htmlFor="kasse-spieler" className="text-sm font-medium">Spieler (optional)</label>
             <Select value={playerId} onValueChange={setPlayerId}>
-              <SelectTrigger>
+              <SelectTrigger id="kasse-spieler">
                 <SelectValue placeholder="Kein Spieler" />
               </SelectTrigger>
               <SelectContent>
@@ -133,8 +137,9 @@ export default function Kasse() {
             </Select>
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium">Notiz (optional)</label>
+            <label htmlFor="kasse-notiz" className="text-sm font-medium">Notiz (optional)</label>
             <Input
+              id="kasse-notiz"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="z.B. Auszahlung an Mötzi"
@@ -145,7 +150,7 @@ export default function Kasse() {
             onClick={handleSubmit}
             disabled={!amount || createTransaction.isPending}
           >
-            {createTransaction.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            {createTransaction.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />}
             Speichern
           </Button>
         </CardContent>
@@ -162,15 +167,15 @@ export default function Kasse() {
           ) : (
             <div className="space-y-2">
               {transactions.map(t => (
-                <div key={t.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="flex items-center gap-3">
+                <div key={t.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     {t.amount >= 0 ? (
-                      <ArrowDownRight className="h-5 w-5 text-green-600" />
+                      <ArrowDownRight className="h-5 w-5 text-success" aria-hidden="true" />
                     ) : (
-                      <ArrowUpRight className="h-5 w-5 text-red-500" />
+                      <ArrowUpRight className="h-5 w-5 text-destructive" aria-hidden="true" />
                     )}
-                    <div>
-                      <div className="text-sm font-medium">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">
                         {t.transaction_type === 'session_pot' ? 'Session-Einzahlung' :
                          t.transaction_type === 'payout' ? 'Auszahlung' : 'Einzahlung'}
                         {t.players?.name && <span className="text-muted-foreground"> – {t.players.name}</span>}
@@ -183,7 +188,7 @@ export default function Kasse() {
                       </p>
                     </div>
                   </div>
-                  <span className={`font-semibold ${t.amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  <span className={`font-semibold ${t.amount >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {t.amount >= 0 ? '+' : ''}{formatCHF(t.amount)}
                   </span>
                 </div>

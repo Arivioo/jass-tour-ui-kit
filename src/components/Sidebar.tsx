@@ -25,11 +25,11 @@ export function Sidebar() {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center border-b px-6">
-        <h1 className="text-lg font-bold text-primary">Beize Jass Tour</h1>
+        <span className="text-lg font-bold text-primary">Beize Jass Tour</span>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+      <nav className="flex-1 space-y-1 p-4" aria-label="Seitennavigation">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -37,14 +37,14 @@ export function Sidebar() {
             end={item.to === '/'}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               )
             }
           >
-            <item.icon className="h-5 w-5" />
+            <item.icon className="h-5 w-5" aria-hidden="true" />
             <span>{item.label}</span>
           </NavLink>
         ))}
@@ -57,7 +57,7 @@ export function Sidebar() {
           className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
           onClick={handleLogout}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5" aria-hidden="true" />
           Abmelden
         </Button>
       </div>

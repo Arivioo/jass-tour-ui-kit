@@ -10,8 +10,10 @@ import { usePlayers } from '@/hooks/usePlayers';
 import { useToast } from '@/hooks/use-toast';
 import { generateJoinCode, createSessionChannel, onSessionEvent, broadcastEvent } from '@/lib/realtime';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function SessionLobby() {
+  usePageTitle('Lobby');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: _players = [] } = usePlayers();
@@ -134,7 +136,7 @@ export default function SessionLobby() {
 
   if (mode === 'choose') {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Gemeinsam spielen</h1>
           <p className="text-muted-foreground">Starte oder tritt einer Session bei</p>
@@ -144,24 +146,27 @@ export default function SessionLobby() {
           <Card
             className="cursor-pointer transition-shadow hover:shadow-md"
             onClick={handleHost}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleHost(); } }}
           >
-            <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+            <CardContent className="flex flex-col items-center justify-center p-4 text-center sm:p-8">
               {isCreating ? (
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" aria-hidden="true" />
               ) : (
-                <Play className="h-12 w-12 text-primary mb-4" />
+                <Play className="h-12 w-12 text-primary mb-4" aria-hidden="true" />
               )}
-              <h3 className="text-lg font-semibold">Session erstellen</h3>
+              <h2 className="text-lg font-semibold">Session erstellen</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 Erstelle eine Session und teile den Code
               </p>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer transition-shadow hover:shadow-md">
-            <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-              <Users className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-lg font-semibold">Session beitreten</h3>
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex flex-col items-center justify-center p-4 text-center sm:p-8">
+              <Users className="h-12 w-12 text-primary mb-4" aria-hidden="true" />
+              <h2 className="text-lg font-semibold">Session beitreten</h2>
               <p className="text-sm text-muted-foreground mt-1 mb-4">
                 Gib den Code ein, um beizutreten
               </p>
@@ -170,11 +175,12 @@ export default function SessionLobby() {
                   value={inputCode}
                   onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                   placeholder="CODE"
+                  aria-label="Session-Code"
                   className="text-center font-mono text-lg tracking-widest"
                   maxLength={6}
                 />
                 <Button onClick={handleJoin} disabled={isCreating || !inputCode.trim()}>
-                  {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Beitreten'}
+                  {isCreating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Beitreten'}
                 </Button>
               </div>
             </CardContent>
@@ -186,7 +192,7 @@ export default function SessionLobby() {
 
   if (mode === 'host') {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-foreground">Session Lobby</h1>
           <p className="text-muted-foreground">Warte auf Mitspieler</p>
@@ -194,14 +200,14 @@ export default function SessionLobby() {
 
         {/* Join Code */}
         <Card className="bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-4 text-center sm:p-8">
             <p className="text-sm text-muted-foreground mb-2">Session Code:</p>
             <div className="flex items-center justify-center gap-4">
-              <span className="text-5xl font-mono font-bold tracking-[0.3em] text-primary">
+              <span className="text-3xl font-mono font-bold tracking-[0.3em] text-primary sm:text-5xl">
                 {joinCode}
               </span>
-              <Button variant="ghost" size="icon" onClick={copyCode}>
-                {copied ? <CheckCircle className="h-5 w-5 text-green-600" /> : <Copy className="h-5 w-5" />}
+              <Button variant="ghost" size="icon" onClick={copyCode} aria-label="Code kopieren">
+                {copied ? <CheckCircle className="h-5 w-5 text-success" aria-hidden="true" /> : <Copy className="h-5 w-5" aria-hidden="true" />}
               </Button>
             </div>
           </CardContent>
@@ -211,7 +217,7 @@ export default function SessionLobby() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
+              <Users className="h-5 w-5 text-primary" aria-hidden="true" />
               Mitspieler ({participants.length + 1}/4)
             </CardTitle>
           </CardHeader>
@@ -234,7 +240,7 @@ export default function SessionLobby() {
         </Card>
 
         <Button size="lg" className="w-full gap-2" onClick={handleStart}>
-          <Play className="h-5 w-5" />
+          <Play className="h-5 w-5" aria-hidden="true" />
           Session starten
         </Button>
       </div>
@@ -243,16 +249,16 @@ export default function SessionLobby() {
 
   // Join mode — waiting for host to start
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">Session beigetreten</h1>
         <p className="text-muted-foreground">Code: {joinCode}</p>
       </div>
 
       <Card>
-        <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <h3 className="text-lg font-semibold">Warte auf Host...</h3>
+        <CardContent className="flex flex-col items-center justify-center p-4 text-center sm:p-12">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" aria-hidden="true" />
+          <h2 className="text-lg font-semibold" role="status" aria-live="polite">Warte auf Host...</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Die Session wird gleich gestartet
           </p>

@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { LuckyWheel } from '@/components/LuckyWheel';
 import { format } from 'date-fns';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { de } from 'date-fns/locale';
 import { exportSessionPdf } from '@/lib/exportPdf';
 import type { Fine, RankingPlayer } from '@/types/jass';
@@ -73,6 +74,7 @@ const PLACEHOLDER_SUMMARY = {
 
 
 export default function Summary() {
+  usePageTitle('Zusammenfassung');
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -263,15 +265,15 @@ export default function Summary() {
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground">Zusammenfassung</h1>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
+        <div className="flex flex-col gap-y-1 text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
           <span>Übersicht des Jass-Abends</span>
           <span className="flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-4 w-4" aria-hidden="true" />
             {format(sessionDate, "EEEE, d. MMMM yyyy", { locale: de })}
           </span>
           {sessionLocation && (
             <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" />
+              <MapPin className="h-4 w-4" aria-hidden="true" />
               {sessionLocation}
             </span>
           )}
@@ -283,7 +285,7 @@ export default function Summary() {
         <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Trophy className="h-5 w-5 text-primary" />
+              <Trophy className="h-5 w-5 text-primary" aria-hidden="true" />
               Gleichstand! Glücksrad entscheidet
             </CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -304,7 +306,7 @@ export default function Summary() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
+            <Trophy className="h-5 w-5 text-primary" aria-hidden="true" />
             Schlussrangliste
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -326,29 +328,29 @@ export default function Summary() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
                   onClick={() => moveUp(index)}
                   disabled={index === 0}
+                  aria-label={`${player.name} nach oben verschieben`}
                 >
-                  <ArrowUp className="h-3 w-3" />
+                  <ArrowUp className="h-3 w-3" aria-hidden="true" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
                   onClick={() => moveDown(index)}
                   disabled={index === rankings.length - 1}
+                  aria-label={`${player.name} nach unten verschieben`}
                 >
-                  <ArrowDown className="h-3 w-3" />
+                  <ArrowDown className="h-3 w-3" aria-hidden="true" />
                 </Button>
               </div>
               <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                player.rank === 1 
-                  ? 'bg-yellow-100 text-yellow-700' 
+                player.rank === 1
+                  ? 'bg-rank-gold text-rank-gold-foreground'
                   : player.rank === 2
-                  ? 'bg-gray-100 text-gray-600'
+                  ? 'bg-rank-silver text-rank-silver-foreground'
                   : player.rank === 3
-                  ? 'bg-orange-100 text-orange-700'
+                  ? 'bg-rank-bronze text-rank-bronze-foreground'
                   : 'bg-muted text-muted-foreground'
               }`}>
                 {player.rank}
@@ -356,11 +358,11 @@ export default function Summary() {
               <div className="flex-1">
                 <div className="font-medium">{player.name}</div>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Medal className="h-3 w-3" />
+                  <Medal className="h-3 w-3" aria-hidden="true" />
                   {player.wins} {player.wins === 1 ? 'Sieg' : 'Siege'}
                 </div>
               </div>
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
+              <GripVertical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             </div>
             );
           })}
@@ -371,7 +373,7 @@ export default function Summary() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
+            <CreditCard className="h-5 w-5 text-primary" aria-hidden="true" />
             Zahlungsübersicht
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -382,7 +384,7 @@ export default function Summary() {
           {payments.map((player) => (
             <div
               key={player.playerId}
-              className="rounded-lg border bg-muted/30 p-4"
+              className="rounded-lg border bg-muted/30 p-3 sm:p-4"
             >
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-lg font-semibold">{player.name}</span>
@@ -390,7 +392,7 @@ export default function Summary() {
               </div>
               
               {/* Summary Row */}
-              <div className="grid grid-cols-3 gap-2 text-sm mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm mb-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Buy-In:</span>
                   <span>{formatCHF(player.buyIn)}</span>
@@ -409,7 +411,7 @@ export default function Summary() {
               {player.finesList.length > 0 && (
                 <div className="border-t pt-3 space-y-2">
                   <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    <AlertCircle className="h-3 w-3" />
+                    <AlertCircle className="h-3 w-3" aria-hidden="true" />
                     Bussen Details
                   </div>
                   <div className="space-y-1">
@@ -418,17 +420,17 @@ export default function Summary() {
                       return (
                         <div
                           key={fine.id || idx}
-                          className="flex items-center justify-between text-sm rounded bg-card p-2"
+                          className="flex items-start sm:items-center justify-between text-sm rounded bg-card p-2 gap-2"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2 min-w-0">
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
+                              <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                               {fine.location}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               Match {fine.matchNumber}
                             </span>
-                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground hidden sm:inline">•</span>
                             <span>{fineType?.label || fine.type}</span>
                             {fine.note && (
                               <span className="text-xs text-muted-foreground">
@@ -436,7 +438,7 @@ export default function Summary() {
                               </span>
                             )}
                           </div>
-                          <span className="font-medium">{formatCHF(fine.amount)}</span>
+                          <span className="font-medium shrink-0">{formatCHF(fine.amount)}</span>
                         </div>
                       );
                     })}
@@ -449,7 +451,7 @@ export default function Summary() {
           {/* Rank Fine Legend */}
           <div className="rounded-lg bg-muted p-3 text-sm">
             <div className="mb-1 font-medium">Rang-Bussen:</div>
-            <div className="grid grid-cols-4 gap-2 text-muted-foreground">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-muted-foreground">
               {Object.entries(JASS.RANK_FINES).map(([rank, fine]) => (
                 <span key={rank}>{rank}. {formatCHF(fine)}</span>
               ))}
@@ -462,15 +464,15 @@ export default function Summary() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5 text-primary" />
+            <Gift className="h-5 w-5 text-primary" aria-hidden="true" />
             Lösli
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Wer ging zuerst nach Hause?</label>
+            <label htmlFor="losli-player" className="text-sm font-medium">Wer ging zuerst nach Hause?</label>
             <Select value={leftFirst} onValueChange={setLeftFirst}>
-              <SelectTrigger>
+              <SelectTrigger id="losli-player">
                 <SelectValue placeholder="Spieler wählen" />
               </SelectTrigger>
               <SelectContent>
@@ -513,7 +515,7 @@ export default function Summary() {
           });
         }}
       >
-        <FileDown className="h-5 w-5" />
+        <FileDown className="h-5 w-5" aria-hidden="true" />
         PDF exportieren
       </Button>
 
@@ -567,9 +569,9 @@ export default function Summary() {
         }}
       >
         {isCompleting ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
         ) : (
-          <CheckCircle className="h-5 w-5" />
+          <CheckCircle className="h-5 w-5" aria-hidden="true" />
         )}
         {isCompleting ? 'Speichern...' : 'Session abschliessen'}
       </Button>

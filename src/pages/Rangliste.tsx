@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { exportRankingsCsv } from '@/lib/exportCsv';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 interface PlayerStats {
   playerId: string;
@@ -37,6 +38,7 @@ const PLAYER_NOTES: { [key: string]: string } = {
 };
 
 export default function Rangliste() {
+  usePageTitle('Rangliste');
   // Fetch all-time rankings with rank distribution
   const { data: rankings = [], isLoading: rankingsLoading, error: rankingsError } = useQuery({
     queryKey: ['all-time-rankings-detailed'],
@@ -121,15 +123,16 @@ export default function Rangliste() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">Daten werden geladen…</span>
       </div>
     );
   }
 
   if (rankingsError || sessionsError) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive" role="alert">
         Daten konnten nicht geladen werden. Bitte versuche es erneut.
       </div>
     );
@@ -164,7 +167,7 @@ export default function Rangliste() {
               totalFines: 0,
             })))}
           >
-            <FileDown className="h-4 w-4" />
+            <FileDown className="h-4 w-4" aria-hidden="true" />
             CSV
           </Button>
         )}
@@ -186,7 +189,7 @@ export default function Rangliste() {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-primary">{rankings[0]?.name || '-'}</div>
+            <div className="text-lg font-bold text-primary truncate sm:text-2xl">{rankings[0]?.name || '-'}</div>
             <div className="text-xs text-muted-foreground">Leader</div>
           </CardContent>
         </Card>
@@ -202,16 +205,19 @@ export default function Rangliste() {
       <Tabs defaultValue="rangliste" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="rangliste" className="gap-1.5">
-            <Trophy className="h-4 w-4" />
+            <Trophy className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Rangliste</span>
+            <span className="sr-only sm:hidden">Rangliste</span>
           </TabsTrigger>
           <TabsTrigger value="statistiken" className="gap-1.5">
-            <TrendingUp className="h-4 w-4" />
+            <TrendingUp className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Statistiken</span>
+            <span className="sr-only sm:hidden">Statistiken</span>
           </TabsTrigger>
           <TabsTrigger value="einzelabende" className="gap-1.5">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">Einzelabende</span>
+            <span className="sr-only sm:hidden">Einzelabende</span>
           </TabsTrigger>
         </TabsList>
 
@@ -220,7 +226,7 @@ export default function Rangliste() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-primary" />
+                <Trophy className="h-5 w-5 text-primary" aria-hidden="true" />
                 Ewige Rangliste 2015–2026
               </CardTitle>
             </CardHeader>
@@ -246,12 +252,12 @@ export default function Rangliste() {
                       <TableRow key={player.playerId}>
                         <TableCell>
                           <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                            index === 0 
-                              ? 'bg-yellow-100 text-yellow-700' 
+                            index === 0
+                              ? 'bg-rank-gold text-rank-gold-foreground'
                               : index === 1
-                              ? 'bg-gray-100 text-gray-600'
+                              ? 'bg-rank-silver text-rank-silver-foreground'
                               : index === 2
-                              ? 'bg-orange-100 text-orange-700'
+                              ? 'bg-rank-bronze text-rank-bronze-foreground'
                               : 'bg-muted text-muted-foreground'
                           }`}>
                             {index + 1}
@@ -285,9 +291,9 @@ export default function Rangliste() {
 
           <Card className="border-dashed">
             <CardContent className="flex items-start gap-3 p-4">
-              <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
               <div>
-                <h4 className="font-medium">Datenqualität</h4>
+                <h2 className="font-medium">Datenqualität</h2>
                 <p className="text-sm text-muted-foreground">
                   2015–2020: 17 Abende. Ab 2021: {totalSessions2021} Abende. Jassreisen nicht enthalten.
                 </p>
@@ -302,7 +308,7 @@ export default function Rangliste() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Medal className="h-5 w-5 text-primary" />
+                <Medal className="h-5 w-5 text-primary" aria-hidden="true" />
                 Spezial-Awards 🏆
               </CardTitle>
             </CardHeader>
@@ -324,7 +330,7 @@ export default function Rangliste() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
+                <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
                 Kuriose Statistiken 🤔
               </CardTitle>
             </CardHeader>
@@ -345,7 +351,7 @@ export default function Rangliste() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <TrendingUp className="h-5 w-5 text-primary" aria-hidden="true" />
                 Spieler-Analyse
               </CardTitle>
             </CardHeader>
@@ -365,12 +371,12 @@ export default function Rangliste() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                          index === 0 
-                            ? 'bg-yellow-100 text-yellow-700' 
+                          index === 0
+                            ? 'bg-rank-gold text-rank-gold-foreground'
                             : index === 1
-                            ? 'bg-gray-100 text-gray-600'
+                            ? 'bg-rank-silver text-rank-silver-foreground'
                             : index === 2
-                            ? 'bg-orange-100 text-orange-700'
+                            ? 'bg-rank-bronze text-rank-bronze-foreground'
                             : 'bg-muted text-muted-foreground'
                         }`}>
                           {index + 1}
@@ -392,7 +398,7 @@ export default function Rangliste() {
                     <div className="flex h-6 overflow-hidden rounded-md">
                       {player.rank1 > 0 && (
                         <div 
-                          className="bg-yellow-400 flex items-center justify-center text-xs font-medium text-yellow-900"
+                          className="bg-yellow-400 flex items-center justify-center text-xs font-medium text-yellow-900 min-w-[1.25rem]"
                           style={{ width: `${(player.rank1 / total) * 100}%` }}
                         >
                           {player.rank1}
@@ -400,7 +406,7 @@ export default function Rangliste() {
                       )}
                       {player.rank2 > 0 && (
                         <div 
-                          className="bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-700"
+                          className="bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-700 min-w-[1.25rem]"
                           style={{ width: `${(player.rank2 / total) * 100}%` }}
                         >
                           {player.rank2}
@@ -408,7 +414,7 @@ export default function Rangliste() {
                       )}
                       {player.rank3 > 0 && (
                         <div 
-                          className="bg-orange-300 flex items-center justify-center text-xs font-medium text-orange-800"
+                          className="bg-orange-300 flex items-center justify-center text-xs font-medium text-orange-800 min-w-[1.25rem]"
                           style={{ width: `${(player.rank3 / total) * 100}%` }}
                         >
                           {player.rank3}
@@ -416,7 +422,7 @@ export default function Rangliste() {
                       )}
                       {player.rank4 > 0 && (
                         <div 
-                          className="bg-red-200 flex items-center justify-center text-xs font-medium text-red-700"
+                          className="bg-red-200 flex items-center justify-center text-xs font-medium text-red-700 min-w-[1.25rem]"
                           style={{ width: `${(player.rank4 / total) * 100}%` }}
                         >
                           {player.rank4}
@@ -437,9 +443,9 @@ export default function Rangliste() {
           {/* Fun Facts */}
           <Card className="border-dashed bg-muted/30">
             <CardContent className="p-4 space-y-3">
-              <h4 className="font-medium flex items-center gap-2">
-                💡 Fun Facts
-              </h4>
+              <h2 className="font-medium flex items-center gap-2">
+                Fun Facts
+              </h2>
               <ul className="text-sm text-muted-foreground space-y-2">
                 <li>🎲 <strong>Zufall?</strong> Die Wahrscheinlichkeit, 13x zu gewinnen bei 34 Abenden liegt bei nur ~2.4%</li>
                 <li>📊 <strong>Statistik:</strong> Rötschi gewinnt durchschnittlich jeden 2.6. Abend</li>
@@ -455,7 +461,7 @@ export default function Rangliste() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
+                <Calendar className="h-5 w-5 text-primary" aria-hidden="true" />
                 Einzelabende ab 2021
               </CardTitle>
             </CardHeader>
@@ -557,7 +563,7 @@ function AwardCard({
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
       <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-muted ${color}`}>
-        <Icon className="h-5 w-5" />
+        <Icon className="h-5 w-5" aria-hidden="true" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-xs text-muted-foreground">{title}</div>

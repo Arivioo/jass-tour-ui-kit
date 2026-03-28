@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function Statuten() {
+  usePageTitle('Statuten');
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -12,12 +14,12 @@ export default function Statuten() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
+            <FileText className="h-5 w-5 text-primary" aria-hidden="true" />
             Statuten
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="whitespace-pre-wrap font-mono text-sm text-muted-foreground">
+          <pre className="whitespace-pre-wrap font-mono text-xs text-muted-foreground sm:text-sm">
 {STATUTEN_TEXT}
           </pre>
         </CardContent>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { usePlayers } from '@/hooks/usePlayers';
 import { Spade, Lock, Mail, User, Loader2 } from 'lucide-react';
 
 export default function Auth() {
+  usePageTitle('Anmeldung');
   const navigate = useNavigate();
   const { data: players = [] } = usePlayers();
 
@@ -122,16 +124,16 @@ export default function Auth() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <Spade className="h-8 w-8 text-primary" />
+            <Spade className="h-8 w-8 text-primary" aria-hidden="true" />
           </div>
           <CardTitle className="text-2xl">Beize Jass Tour</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="password">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="password">Passwort</TabsTrigger>
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Registrieren</TabsTrigger>
+              <TabsTrigger value="password" className="text-xs sm:text-sm">Passwort</TabsTrigger>
+              <TabsTrigger value="login" className="text-xs sm:text-sm">Login</TabsTrigger>
+              <TabsTrigger value="signup" className="text-xs sm:text-sm">Registrieren</TabsTrigger>
             </TabsList>
 
             {/* Shared Password Tab */}
@@ -141,10 +143,11 @@ export default function Auth() {
                   Gib das gemeinsame Passwort ein
                 </p>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                   <Input
                     type="password"
                     placeholder="Passwort"
+                    aria-label="Gemeinsames Passwort"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setPwError(false); }}
                     className={`pl-10 ${pwError ? 'border-destructive' : ''}`}
@@ -153,10 +156,10 @@ export default function Auth() {
                   />
                 </div>
                 {pwError && (
-                  <p className="text-sm text-destructive text-center">Falsches Passwort</p>
+                  <p className="text-sm text-destructive text-center" role="alert">Falsches Passwort</p>
                 )}
                 <Button type="submit" className="w-full" disabled={pwLoading}>
-                  {pwLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {pwLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" /> : null}
                   Eintreten
                 </Button>
               </form>
@@ -166,10 +169,11 @@ export default function Auth() {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4 mt-4">
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                   <Input
                     type="email"
                     placeholder="E-Mail"
+                    aria-label="E-Mail-Adresse"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     className="pl-10"
@@ -177,10 +181,11 @@ export default function Auth() {
                   />
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                   <Input
                     type="password"
                     placeholder="Passwort"
+                    aria-label="Passwort"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     className="pl-10"
@@ -188,10 +193,10 @@ export default function Auth() {
                   />
                 </div>
                 {loginError && (
-                  <p className="text-sm text-destructive text-center">{loginError}</p>
+                  <p className="text-sm text-destructive text-center" role="alert">{loginError}</p>
                 )}
                 <Button type="submit" className="w-full" disabled={loginLoading}>
-                  {loginLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {loginLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" /> : null}
                   Anmelden
                 </Button>
               </form>
@@ -209,10 +214,11 @@ export default function Auth() {
               ) : (
                 <form onSubmit={handleSignup} className="space-y-4 mt-4">
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                     <Input
                       type="email"
                       placeholder="E-Mail"
+                      aria-label="E-Mail-Adresse"
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       className="pl-10"
@@ -220,10 +226,11 @@ export default function Auth() {
                     />
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                     <Input
                       type="password"
                       placeholder="Passwort (min. 6 Zeichen)"
+                      aria-label="Passwort"
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
                       className="pl-10"
@@ -232,12 +239,12 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium flex items-center gap-1.5">
-                      <User className="h-4 w-4" />
+                    <label htmlFor="signup-player" className="text-sm font-medium flex items-center gap-1.5">
+                      <User className="h-4 w-4" aria-hidden="true" />
                       Ich bin...
                     </label>
                     <Select value={signupPlayer} onValueChange={setSignupPlayer}>
-                      <SelectTrigger>
+                      <SelectTrigger id="signup-player">
                         <SelectValue placeholder="Spieler wählen" />
                       </SelectTrigger>
                       <SelectContent>
@@ -248,10 +255,10 @@ export default function Auth() {
                     </Select>
                   </div>
                   {signupError && (
-                    <p className="text-sm text-destructive text-center">{signupError}</p>
+                    <p className="text-sm text-destructive text-center" role="alert">{signupError}</p>
                   )}
                   <Button type="submit" className="w-full" disabled={signupLoading}>
-                    {signupLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    {signupLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" /> : null}
                     Registrieren
                   </Button>
                 </form>

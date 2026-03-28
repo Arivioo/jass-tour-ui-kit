@@ -92,7 +92,7 @@ export function PointsStep({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
+            <Calculator className="h-5 w-5 text-primary" aria-hidden="true" />
             Punkte & Bussen
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -101,10 +101,10 @@ export function PointsStep({
         </CardHeader>
         <CardContent>
           {/* Team Headers */}
-          <div className="mb-3 grid grid-cols-[auto_1fr_1fr_auto] gap-2 text-sm font-medium">
-            <div className="w-16"></div>
-            <div className="text-center text-primary">{teamANames || 'Team A'}</div>
-            <div className="text-center text-muted-foreground">{teamBNames || 'Team B'}</div>
+          <div className="mb-3 grid grid-cols-[auto_1fr_1fr_auto] gap-1 sm:gap-2 text-sm font-medium">
+            <div className="w-12 sm:w-16"></div>
+            <div className="text-center text-primary truncate">{teamANames || 'Team A'}</div>
+            <div className="text-center text-muted-foreground truncate">{teamBNames || 'Team B'}</div>
             <div className="w-8"></div>
           </div>
 
@@ -115,10 +115,12 @@ export function PointsStep({
               const roundFines = getFinesForRound(i);
               return (
                 <div key={i} className="space-y-2">
-                  <div className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-2">
-                    <div className="w-16 text-sm text-muted-foreground">Runde {i + 1}</div>
+                  <div className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-1 sm:gap-2">
+                    <div className="w-12 sm:w-16 text-xs sm:text-sm text-muted-foreground">Runde {i + 1}</div>
                     <Input
                       type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       min="0"
                       max={JASS.POINTS_PER_ROUND}
                       value={scoreA ?? ''}
@@ -128,9 +130,12 @@ export function PointsStep({
                       }}
                       className="text-center"
                       placeholder="0"
+                      aria-label={`Runde ${i + 1} Team A Punkte`}
                     />
                     <Input
                       type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       min="0"
                       max={JASS.POINTS_PER_ROUND}
                       value={scoreB ?? ''}
@@ -140,16 +145,18 @@ export function PointsStep({
                       }}
                       className="text-center"
                       placeholder="0"
+                      aria-label={`Runde ${i + 1} Team B Punkte`}
                     />
                     <Button
                       variant={expandedRound === i ? "default" : "ghost"}
                       size="icon"
-                      className="h-8 w-8 relative"
+                      className="relative"
                       onClick={() => setExpandedRound(expandedRound === i ? null : i)}
+                      aria-label={`Bussen für Runde ${i + 1}`}
                     >
-                      <AlertCircle className="h-4 w-4" />
+                      <AlertCircle className="h-4 w-4" aria-hidden="true" />
                       {roundFines.length > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                           {roundFines.length}
                         </span>
                       )}
@@ -158,7 +165,7 @@ export function PointsStep({
 
                   {/* Expanded Fine Entry for this Round */}
                   {expandedRound === i && (
-                    <div className="ml-16 space-y-2 rounded-lg border bg-muted/50 p-3">
+                    <div className="ml-0 sm:ml-16 space-y-2 rounded-lg border bg-muted/50 p-2 sm:p-3">
                       <div className="text-xs font-medium text-muted-foreground mb-2">
                         Bussen für Runde {i + 1}
                       </div>
@@ -189,6 +196,8 @@ export function PointsStep({
                       {isCustomAmount && (
                         <Input
                           type="number"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           placeholder="Betrag (CHF)"
                           value={amount || ''}
                           onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
@@ -208,7 +217,7 @@ export function PointsStep({
                           onClick={() => handleAddFine(i)}
                           disabled={!selectedPlayer || !selectedType}
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-3 w-3" aria-hidden="true" />
                           Hinzufügen
                         </Button>
                       </div>
@@ -232,10 +241,11 @@ export function PointsStep({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  className="text-muted-foreground hover:text-destructive"
                                   onClick={() => onRemoveFine(fine.id)}
+                                  aria-label="Busse entfernen"
                                 >
-                                  <X className="h-3 w-3" />
+                                  <X className="h-3 w-3" aria-hidden="true" />
                                 </Button>
                               </div>
                             );
@@ -263,7 +273,7 @@ export function PointsStep({
             {teamACantWin ? (
               <div className="text-center space-y-2 animate-fade-in">
                 <div className="flex items-center justify-center gap-2">
-                  <Skull className="h-8 w-8 text-destructive animate-bounce" />
+                  <Skull className="h-8 w-8 text-destructive animate-bounce" aria-hidden="true" />
                   <span className="text-2xl">💀</span>
                 </div>
                 <p className="font-bold text-destructive text-lg">
@@ -276,7 +286,7 @@ export function PointsStep({
             ) : teamBCantWin ? (
               <div className="text-center space-y-2 animate-fade-in">
                 <div className="flex items-center justify-center gap-2">
-                  <Skull className="h-8 w-8 text-destructive animate-bounce" />
+                  <Skull className="h-8 w-8 text-destructive animate-bounce" aria-hidden="true" />
                   <span className="text-2xl">💀</span>
                 </div>
                 <p className="font-bold text-destructive text-lg">
@@ -289,7 +299,7 @@ export function PointsStep({
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-center gap-2 text-primary">
-                  <Trophy className="h-5 w-5" />
+                  <Trophy className="h-5 w-5" aria-hidden="true" />
                   <span className="font-semibold">Letzte Runde!</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-center">
@@ -298,7 +308,7 @@ export function PointsStep({
                     <p className="text-2xl font-bold text-primary">
                       {teamAMinToWin <= 0 ? (
                         <span className="flex items-center justify-center gap-1">
-                          <PartyPopper className="h-5 w-5" />
+                          <PartyPopper className="h-5 w-5" aria-hidden="true" />
                           Führt!
                         </span>
                       ) : (
@@ -314,7 +324,7 @@ export function PointsStep({
                     )}>
                       {teamBMinToWin <= 0 ? (
                         <span className="flex items-center justify-center gap-1">
-                          <PartyPopper className="h-5 w-5" />
+                          <PartyPopper className="h-5 w-5" aria-hidden="true" />
                           Führt!
                         </span>
                       ) : (
@@ -334,7 +344,7 @@ export function PointsStep({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertCircle className="h-4 w-4 text-primary" aria-hidden="true" />
               Bussen dieses Match ({fines.length})
             </CardTitle>
           </CardHeader>
@@ -365,7 +375,7 @@ export function PointsStep({
       )}
 
       {/* Sticky Footer */}
-      <div className="sticky bottom-20 lg:bottom-4">
+      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-4">
         <Card className="border-primary/20 bg-card shadow-lg">
           <CardContent className="p-4">
             <div className="mb-3 flex justify-between text-lg font-bold">
@@ -375,7 +385,7 @@ export function PointsStep({
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="gap-2" onClick={onPrev}>
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 Zurück
               </Button>
               <Button
@@ -384,7 +394,7 @@ export function PointsStep({
                 disabled={!allRoundsComplete}
               >
                 Nächstes Match
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
             {!allRoundsComplete && (

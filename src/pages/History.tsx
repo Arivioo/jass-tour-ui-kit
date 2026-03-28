@@ -6,14 +6,16 @@ import { formatCHF } from '@/lib/players';
 import { JASS } from '@/lib/constants';
 import { useSessionsWithRankings } from '@/hooks/useSessions';
 import { exportSessionsCsv } from '@/lib/exportCsv';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function History() {
+  usePageTitle('Verlauf');
   const navigate = useNavigate();
   const { data: sessions, isLoading, error } = useSessionsWithRankings();
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive" role="alert">
         Daten konnten nicht geladen werden. Bitte versuche es erneut.
       </div>
     );
@@ -21,8 +23,9 @@ export default function History() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">Daten werden geladen…</span>
       </div>
     );
   }
@@ -50,7 +53,7 @@ export default function History() {
               players: s.players,
             })))}
           >
-            <FileDown className="h-4 w-4" />
+            <FileDown className="h-4 w-4" aria-hidden="true" />
             CSV
           </Button>
         )}
@@ -118,7 +121,7 @@ function StatCard({
     <Card>
       <CardContent className="p-3 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-          <Icon className="h-5 w-5 text-primary" />
+          <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
         </div>
         <div>
           <p className="text-xs text-muted-foreground">{label}</p>
@@ -169,10 +172,10 @@ function SessionCard({
     >
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div className="space-y-2 flex-1">
+          <div className="space-y-2 flex-1 min-w-0">
             {/* Date */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
+              <Calendar className="h-4 w-4" aria-hidden="true" />
               {formattedDate}
             </div>
             
@@ -180,7 +183,7 @@ function SessionCard({
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {winner && (
                 <div className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-primary" />
+                  <Trophy className="h-5 w-5 text-primary" aria-hidden="true" />
                   <span className="font-semibold">
                     {winner.name}
                     {tiedForFirst && (
@@ -190,26 +193,26 @@ function SessionCard({
                 </div>
               )}
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" />
+                <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                 {session.location}
               </div>
             </div>
 
             {/* Players & Stats */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" />
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" aria-hidden="true" />
                 {session.players.map(p => p.name).join(', ')}
-              </div>
-              <span>•</span>
+              </span>
+              <span className="hidden sm:inline">•</span>
               <span>{session.matchCount} Matches</span>
-              <span>•</span>
+              <span className="hidden sm:inline">•</span>
               <span>Pot: {formatCHF(session.total_pot)}</span>
               {session.losliPlayerName && (
                 <>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <Gift className="h-3.5 w-3.5" />
+                    <Gift className="h-3.5 w-3.5" aria-hidden="true" />
                     {session.losliPlayerName}
                   </span>
                 </>
@@ -218,17 +221,17 @@ function SessionCard({
 
             {/* Rankings */}
             {session.players.length > 0 && (
-              <div className="flex gap-2 pt-1">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {session.players.map((player, idx) => (
                   <div 
                     key={player.name}
                     className={`flex items-center gap-1 text-xs rounded-full px-2 py-0.5 ${
-                      idx === 0 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : idx === 1 
-                        ? 'bg-gray-100 text-gray-700'
+                      idx === 0
+                        ? 'bg-rank-gold text-rank-gold-foreground'
+                        : idx === 1
+                        ? 'bg-rank-silver text-rank-silver-foreground'
                         : idx === 2
-                        ? 'bg-orange-100 text-orange-800'
+                        ? 'bg-rank-bronze text-rank-bronze-foreground'
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
@@ -240,8 +243,8 @@ function SessionCard({
               </div>
             )}
           </div>
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <ChevronRight className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="shrink-0" aria-label="Session Details anzeigen">
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
           </Button>
         </div>
       </CardContent>
@@ -254,9 +257,9 @@ function EmptyState() {
     <Card className="border-dashed">
       <CardContent className="flex flex-col items-center justify-center py-12 text-center">
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-          <Inbox className="h-8 w-8 text-muted-foreground" />
+          <Inbox className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
         </div>
-        <h3 className="mb-1 text-lg font-semibold">Noch keine Sessions</h3>
+        <h2 className="mb-1 text-lg font-semibold">Noch keine Sessions</h2>
         <p className="text-sm text-muted-foreground">
           Starte deine erste Jass-Session, um hier Daten zu sehen.
         </p>

@@ -13,6 +13,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { RealtimeEvent } from '@/lib/realtime';
 import type { Fine, MatchResult, PlayerWins } from '@/types/jass';
 import { PlayersStep } from '@/components/session/PlayersStep';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { TeamsStep } from '@/components/session/TeamsStep';
 import { PointsStep } from '@/components/session/PointsStep';
 import { QuickFineBar } from '@/components/session/QuickFineBar';
@@ -20,6 +21,7 @@ import { QuickFineBar } from '@/components/session/QuickFineBar';
 type WizardStep = 'players' | 'teams' | 'points';
 
 export default function Session() {
+  usePageTitle('Session');
   const navigate = useNavigate();
   const routeLocation = useLocation();
   const { toast } = useToast();
@@ -274,7 +276,13 @@ export default function Session() {
       }
 
       // Persist to DB
-      const sid = sessionId!;
+      if (!sessionId) {
+        toast({ variant: 'destructive', title: 'Keine Session-ID vorhanden.' });
+        savingRef.current = false;
+        setIsSaving(false);
+        return;
+      }
+      const sid = sessionId;
       try {
         await saveMatchToDB(sid, currentMatch, result, finesWithMeta);
       } catch {
@@ -340,14 +348,14 @@ export default function Session() {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95">
         <div className="text-center space-y-6 animate-scale-in">
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4" aria-hidden="true">
             <Sparkles className="h-12 w-12 text-yellow-500 animate-bounce" style={{ animationDelay: '0s' }} />
             <Trophy className="h-20 w-20 text-primary animate-bounce" style={{ animationDelay: '0.1s' }} />
             <Sparkles className="h-12 w-12 text-yellow-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
           </div>
           <div className="space-y-2">
             <p className="text-xl text-muted-foreground">Match {currentMatch} Gewinner</p>
-            <h1 className="text-4xl font-bold text-primary">
+            <h1 className="text-2xl font-bold text-primary sm:text-4xl">
               🎉 {winnerTeamNames} 🎉
             </h1>
           </div>
@@ -356,7 +364,7 @@ export default function Session() {
             <span className="text-muted-foreground">:</span>
             <span className="text-muted-foreground">{teamBTotal}</span>
           </div>
-          <PartyPopper className="h-16 w-16 text-primary mx-auto animate-bounce" />
+          <PartyPopper className="h-16 w-16 text-primary mx-auto animate-bounce" aria-hidden="true" />
         </div>
       </div>
     );
@@ -386,8 +394,9 @@ export default function Session() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex items-center justify-center py-12" role="status" aria-live="polite">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+          <span className="sr-only">Spieler werden geladen…</span>
         </div>
       ) : (
         <>
