@@ -27,6 +27,22 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
+      - name: Write site-id marker
+        run: echo "jass-tour-ui-kit" > dist/.site-id
+
+      - name: Verify deploy target (site-id guard)
+        run: |
+          REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set ftp:ssl-allow no; cat /Beize-Jass-Tour.mueller.ro/.site-id; quit" 2>/dev/null || echo "")
+          if [ -n "$REMOTE_ID" ] && [ "$REMOTE_ID" != "jass-tour-ui-kit" ]; then
+            echo "::error::DEPLOY ABORTED — remote .site-id is '$REMOTE_ID', expected 'jass-tour-ui-kit'. Wrong FTP target!"
+            exit 1
+          fi
+          echo "Site-id guard passed (remote='${REMOTE_ID:-<none>}')"
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+
       - name: Deploy via FTP
         run: |
           lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
