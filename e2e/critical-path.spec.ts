@@ -1,0 +1,136 @@
+/**
+ * CRITICAL PATH E2E TESTS — Jass Tour UI Kit
+ * ============================================
+ * Tests that the most fundamental user flows ACTUALLY WORK.
+ * If these fail, the app is broken. CI MUST NOT use continue-on-error.
+ *
+ * Tests:
+ * 1. Auth page loads, form is functional
+ * 2. Edge functions: verify-jass-password reachable
+ * 3. Protected routes: redirect works AND auth page is functional
+ * 4. Supabase: project is alive, auth service healthy
+ */
+
+import { test, expect } from '@playwright/test'
+
+const BASE_URL = process.env.BASE_URL || 'https://Beize-Jass-Tour.mueller.ro'
+
+// -- Project Config ----------------------------------------------------------
+
+const CONFIG = {
+  authPath: '/auth',
+  supabaseUrl: process.env.VITE_SUPABASE_URL || 'https://dkxdlovwzsxnepoteebk.supabase.co',
+  edgeFunctions: [
+    'verify-jass-password',
+  ],
+  protectedRoutes: [
+    '/session',
+    '/history',
+    '/rangliste',
+    '/kasse',
+    '/statuten',
+    '/settings',
+  ],
+}
+
+// -- Auth Page ---------------------------------------------------------------
+
+test.describe('CRITICAL PATH — Auth Page', () => {
+  test('auth page loads without JS errors', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', (err) => errors.push(err.message))
+
+    await page.goto(CONFIG.authPath)
+    await page.waitForLoadState('networkidle')
+
+    expect(errors, `JS errors: ${errors.join(', ')}`).toEqual([])
+  })
+
+  test('auth page renders a form or login UI', async ({ page }) => {
+    await page.goto(CONFIG.authPath)
+    await page.waitForLoadState('networkidle')
+
+    // Auth page should have some form of input
+    const formElement = page.locator('input, button[type="submit"], form').first()
+    await expect(formElement).toBeVisible({ timeout: 10000 })
+  })
+})
+
+// -- Edge Function Health ----------------------------------------------------
+
+test.describe('CRITICAL PATH — Edge Functions', () => {
+  for (const funcName of CONFIG.edgeFunctions) {
+    test(`"${funcName}" is reachable (not 500)`, async ({ request }) => {
+      const response = await request.post(
+        `${CONFIG.supabaseUrl}/functions/v1/${funcName}`,
+        {
+          headers: { 'Content-Type': 'application/json' },
+          data: JSON.stringify({ _health_check: true }),
+          failOnStatusCode: false,
+        }
+      )
+
+      const status = response.status()
+      expect(status, `"${funcName}" returned 500 — DOWN`).not.toBe(500)
+
+      if (status === 401) {
+        const body = await response.text()
+        expect(
+          body.includes('requires authorization token'),
+          `"${funcName}" has verify_jwt incorrectly enabled`
+        ).toBe(false)
+      }
+    })
+  }
+})
+
+// -- Protected Routes --------------------------------------------------------
+
+test.describe('CRITICAL PATH — Route Guards', () => {
+  for (const route of CONFIG.protectedRoutes) {
+    test(`${route} redirects to auth when unauthenticated`, async ({ page }) => {
+      await page.goto(route)
+      await page.waitForLoadState('networkidle')
+
+      // Should redirect to /auth
+      const url = page.url()
+      const hasAuthRedirect = url.includes('/auth')
+      const hasFormContent = await page.locator('input, form').first().isVisible().catch(() => false)
+
+      expect(
+        hasAuthRedirect || hasFormContent,
+        `${route} did not redirect to auth — route guard may be broken`
+      ).toBe(true)
+    })
+  }
+})
+
+// -- Infrastructure ----------------------------------------------------------
+
+test.describe('CRITICAL PATH — Infrastructure', () => {
+  test('Supabase auth service is healthy', async ({ request }) => {
+    const response = await request.get(
+      `${CONFIG.supabaseUrl}/auth/v1/health`,
+      { failOnStatusCode: false }
+    )
+    expect(response.status()).toBe(200)
+  })
+
+  test('Supabase REST API is reachable', async ({ request }) => {
+    const response = await request.get(
+      `${CONFIG.supabaseUrl}/rest/v1/`,
+      {
+        headers: { apikey: 'test' },
+        failOnStatusCode: false,
+      }
+    )
+    expect(response.status()).toBeLessThan(500)
+  })
+
+  test('Production site is reachable', async ({ request }) => {
+    const response = await request.get(BASE_URL, {
+      failOnStatusCode: false,
+    })
+    expect(response.status()).toBeLessThan(500)
+  })
+})
