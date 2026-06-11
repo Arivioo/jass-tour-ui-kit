@@ -20,6 +20,10 @@ const BASE_URL = process.env.BASE_URL || 'https://Beize-Jass-Tour.mueller.ro'
 const CONFIG = {
   authPath: '/auth',
   supabaseUrl: process.env.VITE_SUPABASE_URL || 'https://dkxdlovwzsxnepoteebk.supabase.co',
+  // Public client key (already committed in .env / shipped in the JS bundle)
+  supabaseKey:
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    'sb_publishable_9RAQoEYJz6TuSOW9Z5E52g_vd7EmU1a',
   edgeFunctions: [
     'verify-jass-password',
   ],
@@ -111,7 +115,10 @@ test.describe('CRITICAL PATH — Infrastructure', () => {
   test('Supabase auth service is healthy', async ({ request }) => {
     const response = await request.get(
       `${CONFIG.supabaseUrl}/auth/v1/health`,
-      { failOnStatusCode: false }
+      {
+        headers: { apikey: CONFIG.supabaseKey },
+        failOnStatusCode: false,
+      }
     )
     expect(response.status()).toBe(200)
   })
