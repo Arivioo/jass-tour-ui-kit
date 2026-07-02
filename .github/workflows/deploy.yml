@@ -36,7 +36,7 @@ jobs:
 
       - name: Verify deploy target (site-id guard)
         run: |
-          REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set ftp:ssl-allow no; cat /Beize-Jass-Tour.mueller.ro/.site-id; quit" 2>/dev/null || echo "")
+          REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no; cat /Beize-Jass-Tour.mueller.ro/.site-id; quit" 2>/dev/null || echo "")
           if [ -n "$REMOTE_ID" ] && [ "$REMOTE_ID" != "jass-tour-ui-kit" ]; then
             echo "::error::DEPLOY ABORTED — remote .site-id is '$REMOTE_ID', expected 'jass-tour-ui-kit'. Wrong FTP target!"
             exit 1
@@ -50,7 +50,7 @@ jobs:
       - name: Deploy via FTP
         run: |
           lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
-          set ftp:ssl-allow no
+          set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no
           mirror --reverse --verbose --no-perms \
             ./dist/ /Beize-Jass-Tour.mueller.ro/
           bye
