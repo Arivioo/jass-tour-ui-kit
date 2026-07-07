@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
+import { Footer } from './Footer';
 
 /** Announces route changes for screen readers in SPA navigation. */
 function RouteAnnouncer() {
@@ -62,6 +63,7 @@ export function Layout() {
         <div className="mx-auto max-w-2xl px-4 py-6 lg:max-w-4xl lg:px-8">
           <Outlet />
         </div>
+        <Footer />
       </main>
 
       {/* Mobile bottom nav */}
