@@ -11,6 +11,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
@@ -36,7 +37,7 @@ jobs:
 
       - name: Verify deploy target (site-id guard)
         run: |
-          REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no; cat /Beize-Jass-Tour.mueller.ro/.site-id; quit" 2>/dev/null || echo "")
+          REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set net:timeout 30; set net:max-retries 2; set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no; cat /Beize-Jass-Tour.mueller.ro/.site-id; quit" 2>/dev/null || echo "")
           if [ -n "$REMOTE_ID" ] && [ "$REMOTE_ID" != "jass-tour-ui-kit" ]; then
             echo "::error::DEPLOY ABORTED — remote .site-id is '$REMOTE_ID', expected 'jass-tour-ui-kit'. Wrong FTP target!"
             exit 1
@@ -51,6 +52,7 @@ jobs:
         run: |
           lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
           set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no
+          set ftp:passive-mode yes; set ftp:prefer-epsv no; set net:timeout 30; set net:max-retries 4; set net:persist-retries 4; set net:reconnect-interval-base 8; set mirror:parallel-transfer-count 4
           mirror --reverse --verbose --no-perms \
             ./dist/ /Beize-Jass-Tour.mueller.ro/
           bye
