@@ -21,7 +21,9 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install
+      # npm ci (not npm install) enforces lockfile integrity — a drifted
+      # package-lock.json fails loudly instead of being silently mutated.
+      - run: npm ci
 
       - name: Lint
         run: npm run lint
