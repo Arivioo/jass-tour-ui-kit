@@ -6,7 +6,9 @@ on:
 
 concurrency:
   group: deploy-production
-  cancel-in-progress: true
+  # Never cancel a mid-flight FTP mirror — a cancelled mirror --delete can leave
+  # production in a half-uploaded/half-deleted state (breakage investigation §6).
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -50,13 +52,23 @@ jobs:
 
       - name: Deploy via FTP
         run: |
-          lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT
+          n=0
+          until [ $n -ge 4 ]; do
+          OUT=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT 2>&1
           set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no
           set ftp:passive-mode yes; set ftp:prefer-epsv no; set net:timeout 30; set net:max-retries 4; set net:persist-retries 4; set net:reconnect-interval-base 8; set mirror:parallel-transfer-count 4
           mirror --reverse --verbose --no-perms \
             ./dist/ /Beize-Jass-Tour.mueller.ro/
           bye
           SCRIPT
+          )
+          RC=$?
+          echo "$OUT"
+          [ $RC -eq 0 ] && { echo "Deploy ok (attempt $((n+1)))"; break; }
+          echo "$OUT" | grep -qiE '530|login (incorrect|failed)' && { echo "::error::FTP auth failed (530) — stale FTP secret, not transient; not retrying."; exit 1; }
+          n=$((n+1)); [ $n -ge 4 ] && { echo "::error::Deploy failed after 4 attempts"; exit 1; }
+          echo "::warning::attempt $n failed (transient); retrying in 25s..."; sleep 25
+          done
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USERNAME }}
