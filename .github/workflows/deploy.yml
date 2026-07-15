@@ -54,6 +54,9 @@ jobs:
 
       - name: Deploy via FTP
         run: |
+          # set +e: GitHub runs steps with bash -e, which aborts OUT=$(lftp…) on the
+          # first failure BEFORE this retry loop can iterate (dead-retry, deploy-standard §3f).
+          set +e
           n=0
           until [ $n -ge 4 ]; do
           OUT=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" <<SCRIPT 2>&1
