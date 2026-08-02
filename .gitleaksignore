@@ -1,0 +1,8 @@
+# gitleaks false-positive allowlist (fingerprints: commit:file:rule:line).
+#
+# VITE_SUPABASE_PUBLISHABLE_KEY is a Supabase *publishable* key — public by
+# design (it ships in every client bundle; Row-Level Security protects data),
+# not a secret. It is injected into the CI build/e2e steps because .env was
+# untracked in e877113. The generic-api-key rule flags its shape; allowlist it.
+bbfea01503ec55d0f358f816ce68d887d7e2b4bc:.github/workflows/deploy.yml:generic-api-key:42
+bbfea01503ec55d0f358f816ce68d887d7e2b4bc:.github/workflows/test.yml:generic-api-key:52
