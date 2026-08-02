@@ -31,7 +31,16 @@ jobs:
       - name: Test
         run: npm test -- --run
 
-      - run: npm run build
+      # Public-safe Supabase client config (publishable key + public project URL —
+      # these ship in every client bundle by design; RLS protects data). Injected
+      # here because .env was untracked in e877113; without them Vite inlines
+      # `undefined` and the app throws "supabaseUrl is required." at boot.
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://dkxdlovwzsxnepoteebk.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_9RAQoEYJz6TuSOW9Z5E52g_vd7EmU1a
+          VITE_SUPABASE_PROJECT_ID: dkxdlovwzsxnepoteebk
 
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp

@@ -42,8 +42,15 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
+      # Public-safe Supabase client config (see deploy.yml) — the Playwright
+      # webServer runs `npm run dev`, which needs these since .env was untracked
+      # in e877113. Vite exposes process.env vars prefixed with VITE_.
       - name: Run critical path tests
         run: npx playwright test e2e/critical-path.spec.ts
+        env:
+          VITE_SUPABASE_URL: https://dkxdlovwzsxnepoteebk.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_9RAQoEYJz6TuSOW9Z5E52g_vd7EmU1a
+          VITE_SUPABASE_PROJECT_ID: dkxdlovwzsxnepoteebk
 
       - name: Upload test results
         if: failure()
