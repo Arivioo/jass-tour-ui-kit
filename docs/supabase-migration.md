@@ -65,7 +65,7 @@ Run in the [SQL Editor](https://supabase.com/dashboard/project/dkxdlovwzsxnepote
 - Set `JASS_PASSWORD` secret in [Project Secrets](https://supabase.com/dashboard/project/dkxdlovwzsxnepoteebk/settings/vault/secrets)
 
 ### 3. Update GitHub Actions Secrets
-At [Repository Secrets](https://github.com/Arivioo/jass-tour-ui-kit/settings/secrets/actions):
+At [Repository Secrets](https://github.com/Predivo-GmbH/jass-tour-ui-kit/settings/secrets/actions):
 - `SUPABASE_URL` → `https://dkxdlovwzsxnepoteebk.supabase.co`
 - `SUPABASE_ANON_KEY` → (see .env or GitHub Actions secrets)
 
