@@ -49,7 +49,7 @@ jobs:
         run: npx playwright test e2e/critical-path.spec.ts
         env:
           VITE_SUPABASE_URL: https://dkxdlovwzsxnepoteebk.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_9RAQoEYJz6TuSOW9Z5E52g_vd7EmU1a
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_PROJECT_ID: dkxdlovwzsxnepoteebk
 
       - name: Upload test results

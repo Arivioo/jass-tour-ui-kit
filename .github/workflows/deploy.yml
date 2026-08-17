@@ -3,26 +3,37 @@ name: Build and Deploy to Plesk
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm PRODUCTION deploy'
+        required: true
+        default: ''
 
 concurrency:
   group: deploy-production
-  # Never cancel a mid-flight FTP mirror — a cancelled mirror --delete can leave
-  # production in a half-uploaded/half-deleted state (breakage investigation §6).
+  # Never cancel a mid-flight FTP mirror - a cancelled mirror --delete can leave
+  # production in a half-uploaded/half-deleted state (breakage investigation SS6).
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  validate:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
 
-      # npm ci (not npm install) enforces lockfile integrity — a drifted
-      # package-lock.json fails loudly instead of being silently mutated.
       - run: npm ci
 
       - name: Lint
@@ -31,15 +42,80 @@ jobs:
       - name: Test
         run: npm test -- --run
 
-      # Public-safe Supabase client config (publishable key + public project URL —
-      # these ship in every client bundle by design; RLS protects data). Injected
-      # here because .env was untracked in e877113; without them Vite inlines
-      # `undefined` and the app throws "supabaseUrl is required." at boot.
+      # Public-safe Supabase client config (publishable key + public project URL -
+      # these ship in every client bundle by design; RLS protects data).
       - name: Build
         run: npm run build
         env:
           VITE_SUPABASE_URL: https://dkxdlovwzsxnepoteebk.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_9RAQoEYJz6TuSOW9Z5E52g_vd7EmU1a
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: dkxdlovwzsxnepoteebk
+
+  gate-security:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz -C /tmp gitleaks
+          chmod +x /tmp/gitleaks
+
+      - name: 'Secret scan: working tree (BLOCKING - new committed-file leaks)'
+        run: /tmp/gitleaks dir . --no-banner --redact --exit-code 1
+
+      - name: 'Secret scan: full history (AUDIT only, non-blocking - historical keys are public/deprecated)'
+        run: /tmp/gitleaks git . --no-banner --redact --log-opts=--all --exit-code 0 || true
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dependency audit (blocking at critical)
+        run: npm audit --audit-level=critical
+
+      # SAST - code-level security (fleet-hardening Wave 2, proven route from project-starter).
+      # A different layer than npm audit (deps) + gitleaks (secrets in git): semgrep reads OUR
+      # code for injection / XSS / hardcoded secrets. `.semgrepignore` excludes test/dev files
+      # (example tokens + fixtures = false positives). --severity=ERROR = highest confidence;
+      # --error fails the gate on a real finding.
+      - name: SAST scan (semgrep)
+        run: |
+          python3 -m pip install --quiet semgrep
+          semgrep scan --config=p/security-audit --config=p/secrets --severity=ERROR --error --metrics=off .
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm == 'deploy'
+    needs: [validate, gate-security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test -- --run
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://dkxdlovwzsxnepoteebk.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_PROJECT_ID: dkxdlovwzsxnepoteebk
 
       - name: Install lftp
@@ -52,7 +128,7 @@ jobs:
         run: |
           REMOTE_ID=$(lftp -u "$FTP_USER,$FTP_PASS" "ftp://$FTP_HOST" -e "set net:timeout 30; set net:max-retries 2; set ftp:ssl-force yes; set ssl:verify-certificate no; set ftp:ssl-protect-data no; cat /Beize-Jass-Tour.mueller.ro/.site-id; quit" 2>/dev/null || echo "")
           if [ -n "$REMOTE_ID" ] && [ "$REMOTE_ID" != "jass-tour-ui-kit" ]; then
-            echo "::error::DEPLOY ABORTED — remote .site-id is '$REMOTE_ID', expected 'jass-tour-ui-kit'. Wrong FTP target!"
+            echo "::error::DEPLOY ABORTED - remote .site-id is '$REMOTE_ID', expected 'jass-tour-ui-kit'. Wrong FTP target!"
             exit 1
           fi
           echo "Site-id guard passed (remote='${REMOTE_ID:-<none>}')"
@@ -63,8 +139,8 @@ jobs:
 
       - name: Deploy via FTP
         run: |
-          # set +e: GitHub runs steps with bash -e, which aborts OUT=$(lftp…) on the
-          # first failure BEFORE this retry loop can iterate (dead-retry, deploy-standard §3f).
+          # set +e: GitHub runs steps with bash -e, which aborts OUT=$(lftp...) on the
+          # first failure BEFORE this retry loop can iterate (dead-retry, deploy-standard SS3f).
           set +e
           n=0
           until [ $n -ge 4 ]; do
@@ -79,7 +155,7 @@ jobs:
           RC=$?
           echo "$OUT"
           [ $RC -eq 0 ] && { echo "Deploy ok (attempt $((n+1)))"; break; }
-          echo "$OUT" | grep -qiE '530|login (incorrect|failed)' && { echo "::error::FTP auth failed (530) — stale FTP secret, not transient; not retrying."; exit 1; }
+          echo "$OUT" | grep -qiE '530|login (incorrect|failed)' && { echo "::error::FTP auth failed (530) - stale FTP secret, not transient; not retrying."; exit 1; }
           n=$((n+1)); [ $n -ge 4 ] && { echo "::error::Deploy failed after 4 attempts"; exit 1; }
           echo "::warning::attempt $n failed (transient); retrying in 25s..."; sleep 25
           done
