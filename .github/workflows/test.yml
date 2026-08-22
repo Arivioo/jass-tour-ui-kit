@@ -48,9 +48,9 @@ jobs:
       - name: Run critical path tests
         run: npx playwright test e2e/critical-path.spec.ts
         env:
-          VITE_SUPABASE_URL: https://dkxdlovwzsxnepoteebk.supabase.co
+          VITE_SUPABASE_URL: https://uyksotlmrlxhmyeopktl.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          VITE_SUPABASE_PROJECT_ID: dkxdlovwzsxnepoteebk
+          VITE_SUPABASE_PROJECT_ID: uyksotlmrlxhmyeopktl
 
       - name: Upload test results
         if: failure()

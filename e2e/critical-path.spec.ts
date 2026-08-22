@@ -19,7 +19,7 @@ const BASE_URL = process.env.BASE_URL || 'https://Beize-Jass-Tour.mueller.ro'
 
 const CONFIG = {
   authPath: '/auth',
-  supabaseUrl: process.env.VITE_SUPABASE_URL || 'https://dkxdlovwzsxnepoteebk.supabase.co',
+  supabaseUrl: process.env.VITE_SUPABASE_URL || 'https://uyksotlmrlxhmyeopktl.supabase.co',
   // Public client key (already committed in .env / shipped in the JS bundle)
   supabaseKey:
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||

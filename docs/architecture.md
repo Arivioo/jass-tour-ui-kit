@@ -11,9 +11,9 @@ Swiss Jass card game scoring PWA for the "Beize Jass Tour" group. Tracks matches
 - **Deployment:** GitHub Actions → FTPS to `Beize-Jass-Tour.mueller.ro`
 
 ## Supabase Project
-- **Project ID:** `dkxdlovwzsxnepoteebk`
-- **URL:** `https://dkxdlovwzsxnepoteebk.supabase.co`
-- **Region:** eu-central-1
+- **Project ID:** `uyksotlmrlxhmyeopktl`
+- **URL:** `https://uyksotlmrlxhmyeopktl.supabase.co`
+- **Region:** eu-west-1
 
 ## Database Schema (10 tables)
 
@@ -115,9 +115,9 @@ All tables have **public read/write** policies. The app uses a shared password g
 
 ## Environment Variables
 ```
-VITE_SUPABASE_PROJECT_ID="dkxdlovwzsxnepoteebk"
+VITE_SUPABASE_PROJECT_ID="uyksotlmrlxhmyeopktl"
 VITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_..."
-VITE_SUPABASE_URL="https://dkxdlovwzsxnepoteebk.supabase.co"
+VITE_SUPABASE_URL="https://uyksotlmrlxhmyeopktl.supabase.co"
 ```
 
 ## Development
