@@ -67,7 +67,7 @@ jobs:
           chmod +x /tmp/gitleaks
 
       - name: 'Secret scan: working tree (BLOCKING - new committed-file leaks)'
-        run: /tmp/gitleaks dir . --no-banner --redact --exit-code 1
+        run: /tmp/gitleaks dir . --no-banner --redact -v --exit-code 1
 
       - name: 'Secret scan: full history (AUDIT only, non-blocking - historical keys are public/deprecated)'
         run: /tmp/gitleaks git . --no-banner --redact --log-opts=--all --exit-code 0 || true
