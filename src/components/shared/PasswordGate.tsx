@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
-const GATE_PASSWORD_HASH = '3bd8037a8ed38a35825983767f94e6cf3b18c3deee1601daee71faec0d83565f'
+const GATE_PASSWORD_HASH = 'a1b6437f91ecced14992b6bb46314c9888517bce3eee23dc6e4981c519b0cac7'
 const STORAGE_KEY = 'jasstour-unlocked'
 
 async function sha256(message: string): Promise<string> {
