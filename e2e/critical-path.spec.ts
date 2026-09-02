@@ -13,7 +13,7 @@
 
 import { test, expect } from '@playwright/test'
 
-const BASE_URL = process.env.BASE_URL || 'https://Beize-Jass-Tour.mueller.ro'
+import { BASE_URL } from './base-url'
 
 // -- Project Config ----------------------------------------------------------
 
