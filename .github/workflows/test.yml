@@ -48,6 +48,12 @@ jobs:
       - name: Run critical path tests
         run: npx playwright test e2e/critical-path.spec.ts
         env:
+          # SAY WHAT WE BUILT. This spec used to default to https://Beize-Jass-Tour.mueller.ro and
+          # nothing in this repository ever set BASE_URL, so the gate tested the live site instead
+          # of the commit. e2e/base-url.ts now REFUSES to start in CI when this is missing, so the
+          # address and the build cannot drift apart. 5173 is the port playwright.config.ts starts
+          # its webServer on when E2E_PORT is not supplied.
+          BASE_URL: http://localhost:5173
           VITE_SUPABASE_URL: https://uyksotlmrlxhmyeopktl.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_PROJECT_ID: uyksotlmrlxhmyeopktl
